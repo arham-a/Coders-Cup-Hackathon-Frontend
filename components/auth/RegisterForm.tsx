@@ -4,11 +4,19 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { EmploymentType } from '@/lib/types/user';
-import { formatCNIC, formatPhone, isValidCNIC, isValidPhone } from '@/lib/utils/auth';
+import {
+  formatCNIC,
+  formatPhone,
+  isValidCNIC,
+  isValidPhone
+} from '@/lib/utils/auth';
 import { Alert } from '@/components/ui/Alert';
 import { ProgressIndicator } from './ProgressIndicator';
 import { RegisterFormStep1 } from './RegisterFormStep1';
 import { RegisterFormStep2 } from './RegisterFormStep2';
+
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000/api";
+
 
 interface RegisterFormProps {
   onSuccess?: (data: { email: string; fullName: string }) => void;
@@ -17,6 +25,7 @@ interface RegisterFormProps {
 export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
+
   const [formData, setFormData] = useState({
     fullName: '',
     cnic: '',
@@ -31,9 +40,13 @@ export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
     employmentType: '' as EmploymentType | '',
     employerName: '',
   });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // -------------------------------------
+  // VALIDATION
+  // -------------------------------------
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -78,17 +91,9 @@ export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
-    }
-
-    if (!formData.province) {
-      newErrors.province = 'Province is required';
-    }
+    if (!formData.address.trim()) newErrors.address = 'Address is required';
+    if (!formData.city.trim()) newErrors.city = 'City is required';
+    if (!formData.province) newErrors.province = 'Province is required';
 
     if (!formData.monthlyIncome) {
       newErrors.monthlyIncome = 'Monthly income is required';
@@ -104,10 +109,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
     return Object.keys(newErrors).length === 0;
   };
 
+  // -------------------------------------
+  // NEXT / BACK
+  // -------------------------------------
   const handleNext = () => {
-    if (step === 1 && validateStep1()) {
-      setStep(2);
-    }
+    if (step === 1 && validateStep1()) setStep(2);
   };
 
   const handleBack = () => {
@@ -115,66 +121,77 @@ export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
     setErrors({});
   };
 
+  // -------------------------------------
+  // SUBMIT REGISTER → SEND OTP → REDIRECT
+  // -------------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateStep2()) return;
 
     setIsLoading(true);
     setErrors({});
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // For demo: Skip actual API call and go directly to OTP
-    if (onSuccess) {
-      onSuccess({ email: formData.email, fullName: formData.fullName });
-    } else {
-      router.push('/registration-success');
-    }
-    
-    setIsLoading(false);
-
-    /* 
-    // TODO: Uncomment for production with real API
     try {
-      const { confirmPassword, ...registerData } = formData;
+      const { confirmPassword, ...payload } = formData;
 
-      await authService.register({
-        ...registerData,
-        monthlyIncome: Number(registerData.monthlyIncome),
-        employmentType: registerData.employmentType as EmploymentType,
+      // Convert monthlyIncome to number
+      const registerPayload = {
+        ...payload,
+        monthlyIncome: Number(payload.monthlyIncome),
+        employmentType: payload.employmentType as EmploymentType,
+      };
+
+      // 1) REGISTER API
+      const registerRes = await fetch(`${BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(registerPayload),
       });
 
+      const registerData = await registerRes.json();
+
+      if (!registerRes.ok) {
+        throw new Error(registerData.message || "Registration failed");
+      }
+
+      // 2) SEND OTP API
+      await fetch(`${BASE_URL}/auth/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      // 3) Callback or redirect
       if (onSuccess) {
         onSuccess({ email: formData.email, fullName: formData.fullName });
       } else {
-        router.push('/registration-success');
+        router.push(`/verify-otp?email=${encodeURIComponent(formData.email)}`);
       }
+
     } catch (error: any) {
-      const message = error.response?.data?.message || error.message || 'Registration failed. Please try again.';
-      setErrors({ general: message });
+      setErrors({ general: error.message });
     } finally {
       setIsLoading(false);
     }
-    */
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  // -------------------------------------
+  // ON INPUT CHANGE
+  // -------------------------------------
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
 
     let formattedValue = value;
 
-    if (name === 'cnic') {
-      formattedValue = formatCNIC(value);
-    } else if (name === 'phone') {
-      formattedValue = formatPhone(value);
-    }
+    if (name === "cnic") formattedValue = formatCNIC(value);
+    if (name === "phone") formattedValue = formatPhone(value);
 
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
 
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
 
@@ -183,7 +200,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
       <ProgressIndicator
         currentStep={step}
         totalSteps={2}
-        labels={['Personal Info', 'Financial Info']}
+        labels={["Personal Info", "Financial Info"]}
       />
 
       {errors.general && (
@@ -216,8 +233,11 @@ export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
 
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-600">
-          Already have an account?{' '}
-          <Link href="/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="text-emerald-600 hover:text-emerald-700 font-medium"
+          >
             Sign in here
           </Link>
         </p>

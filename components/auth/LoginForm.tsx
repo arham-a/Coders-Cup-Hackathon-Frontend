@@ -3,22 +3,29 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { authService } from '@/lib/services/authService';
 import { UserStatus } from '@/lib/types/user';
 import { InputMotion } from '@/components/ui/InputMotion';
 import { Label } from '@/components/ui/Label';
 import { Alert } from '@/components/ui/Alert';
 import { cn } from '@/lib/utils';
 
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:5000/api";
+
+
 export function LoginForm() {
   const router = useRouter();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // -------------------------------
+  // VALIDATION
+  // -------------------------------
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -36,56 +43,78 @@ export function LoginForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // -------------------------------
+  // HANDLE SUBMIT (REAL API)
+  // -------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setIsLoading(true);
     setErrors({});
 
     try {
-      const authData = await authService.login(formData.email, formData.password);
+      // 1) Make login API request
+      const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-      // Check user status
-      if (authData.user.status === UserStatus.PENDING) {
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // 2) User status handling
+      if (data.data.user.status === UserStatus.PENDING) {
         router.push('/pending-approval');
-        return;
-      } else if (authData.user.status === UserStatus.REJECTED) {
-        setErrors({ general: 'Your account has been rejected. Please contact support.' });
-        authService.clearAuth();
         return;
       }
 
-      // Successful login - redirect based on role
-      if (authData.user.role === 'ADMIN') {
+      if (data.data.user.status === UserStatus.REJECTED) {
+        setErrors({ general: 'Your account has been rejected. Please contact support.' });
+        return;
+      }
+
+      // 3) Save token & user info
+      localStorage.setItem("accessToken", data.data.accessToken);
+      localStorage.setItem("refreshToken", data.data.refreshToken);
+      localStorage.setItem("user", JSON.stringify(data.data.user));
+
+      // 4) Redirect based on ROLE
+      if (data.data.user.role === 'ADMIN') {
         router.push('/admin/dashboard');
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
-      // Don't show error for network issues (mock mode)
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        console.log('Using mock authentication mode');
-        // The authService already handled mock login, just redirect
-        router.push('/dashboard');
-      } else {
-        const message = error.response?.data?.message || 'Login failed. Please try again.';
-        setErrors({ general: message });
-      }
+
+    } catch (err: any) {
+      setErrors({
+        general: err.message || "Login failed. Please try again."
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // -------------------------------
+  // HANDLE INPUT CHANGE
+  // -------------------------------
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setFormData(prev => ({ ...prev, [name]: value }));
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
+  // -------------------------------
+  // UI
+  // -------------------------------
   return (
     <>
       {errors.general && (
