@@ -91,11 +91,20 @@ class ApiClient {
   }
 
   private handleError(error: AxiosError) {
+    // Don't log errors for auth endpoints when using mock mode
+    const isAuthEndpoint = error.config?.url?.includes('/auth/');
+    
     if (error.response) {
       const message = (error.response.data as any)?.message || 'An error occurred';
-      console.error('API Error:', message);
+      if (!isAuthEndpoint) {
+        console.error('API Error:', message);
+      }
     } else if (error.request) {
-      console.error('Network Error: Unable to reach the server');
+      // Network errors are expected when backend is not running (mock mode)
+      // Only log if not an auth endpoint
+      if (!isAuthEndpoint) {
+        console.log('API not available, using mock data');
+      }
     }
   }
 

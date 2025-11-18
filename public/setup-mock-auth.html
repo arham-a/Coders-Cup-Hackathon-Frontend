@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Mock Authentication</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #047857;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        p {
+            color: #6B7280;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(5, 150, 105, 0.3);
+        }
+        
+        .button:active {
+            transform: translateY(0);
+        }
+        
+        .success {
+            background: #D1FAE5;
+            color: #065F46;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .success.show {
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .info {
+            background: #F3F4F6;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #4B5563;
+        }
+        
+        .info strong {
+            color: #047857;
+        }
+        
+        .link {
+            color: #059669;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Setup Mock Authentication</h1>
+        <p>Click the button below to set up mock authentication data in your browser. This will allow you to access the dashboard without a backend API.</p>
+        
+        <button class="button" onclick="setupMockAuth()">
+            Setup Mock User & Access Dashboard
+        </button>
+        
+        <div class="success" id="success">
+            <strong>✅ Success!</strong><br>
+            Mock authentication has been set up. Redirecting to dashboard...
+        </div>
+        
+        <div class="info">
+            <strong>Mock User Details:</strong><br>
+            Name: John Doe<br>
+            Email: john@example.com<br>
+            Role: USER<br>
+            Status: APPROVED
+        </div>
+    </div>
+    
+    <script>
+        function setupMockAuth() {
+            // Set mock access token
+            localStorage.setItem('accessToken', 'mock-token-123456789');
+            
+            // Set mock user data
+            const mockUser = {
+                id: 'user-123',
+                fullName: 'John Doe',
+                email: 'john@example.com',
+                phone: '+92-300-1234567',
+                role: 'USER',
+                status: 'APPROVED',
+                city: 'Karachi',
+                province: 'Sindh',
+                monthlyIncome: 50000,
+                employmentType: 'SALARIED',
+                createdAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem('user', JSON.stringify(mockUser));
+            
+            // Show success message
+            document.getElementById('success').classList.add('show');
+            
+            // Redirect to dashboard after 1.5 seconds
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

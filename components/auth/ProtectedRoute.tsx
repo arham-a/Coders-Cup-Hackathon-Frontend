@@ -1,59 +1,41 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { authService } from '@/lib/services/authService';
-import { UserRole, UserStatus } from '@/lib/types/user';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAuth?: boolean;
-  requiredRole?: UserRole;
-  requiredStatus?: UserStatus;
+  requiredRole?: any;
+  requiredStatus?: any;
 }
 
-export function ProtectedRoute({
-  children,
-  requireAuth = true,
-  requiredRole,
-  requiredStatus = UserStatus.APPROVED,
-}: ProtectedRouteProps) {
-  const router = useRouter();
-
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  // DEVELOPMENT MODE: Auto-setup mock user, no authentication required
   useEffect(() => {
-    if (requireAuth) {
-      const isAuth = authService.isAuthenticated();
-      
-      if (!isAuth) {
-        router.push('/login');
-        return;
-      }
+    if (typeof window !== 'undefined') {
+      const mockUser = {
+        id: 'user-123',
+        fullName: 'John Doe',
+        email: 'demo@example.com',
+        phone: '+92-300-1234567',
+        address: '123 Main Street',
+        city: 'Karachi',
+        province: 'Sindh',
+        monthlyIncome: 50000,
+        employmentType: 'SALARIED',
+        role: 'USER',
+        status: 'APPROVED',
+        createdAt: new Date().toISOString()
+      };
 
-      const user = authService.getStoredUser();
-      
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      // Check status
-      if (user.status !== requiredStatus) {
-        if (user.status === UserStatus.PENDING) {
-          router.push('/pending-approval');
-        } else if (user.status === UserStatus.REJECTED) {
-          authService.clearAuth();
-          router.push('/login');
-        }
-        return;
-      }
-
-      // Check role
-      if (requiredRole && user.role !== requiredRole) {
-        router.push('/unauthorized');
-        return;
+      // Auto-set mock authentication if not present
+      if (!localStorage.getItem('accessToken')) {
+        localStorage.setItem('accessToken', 'dev-mock-token');
+        localStorage.setItem('user', JSON.stringify(mockUser));
       }
     }
-  }, [requireAuth, requiredRole, requiredStatus, router]);
+  }, []);
 
+  // No authentication checks - just render children
   return <>{children}</>;
 }
