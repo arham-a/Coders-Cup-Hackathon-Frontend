@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { authService } from '@/lib/services/authService';
 import { EmploymentType } from '@/lib/types/user';
 import { formatCNIC, formatPhone, isValidCNIC, isValidPhone } from '@/lib/utils/auth';
 import { Alert } from '@/components/ui/Alert';
@@ -11,7 +10,11 @@ import { ProgressIndicator } from './ProgressIndicator';
 import { RegisterFormStep1 } from './RegisterFormStep1';
 import { RegisterFormStep2 } from './RegisterFormStep2';
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  onSuccess?: (data: { email: string; fullName: string }) => void;
+}
+
+export function RegisterForm({ onSuccess }: RegisterFormProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -120,6 +123,20 @@ export function RegisterForm() {
     setIsLoading(true);
     setErrors({});
 
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // For demo: Skip actual API call and go directly to OTP
+    if (onSuccess) {
+      onSuccess({ email: formData.email, fullName: formData.fullName });
+    } else {
+      router.push('/registration-success');
+    }
+    
+    setIsLoading(false);
+
+    /* 
+    // TODO: Uncomment for production with real API
     try {
       const { confirmPassword, ...registerData } = formData;
 
@@ -129,13 +146,18 @@ export function RegisterForm() {
         employmentType: registerData.employmentType as EmploymentType,
       });
 
-      router.push('/registration-success');
+      if (onSuccess) {
+        onSuccess({ email: formData.email, fullName: formData.fullName });
+      } else {
+        router.push('/registration-success');
+      }
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Registration failed. Please try again.';
       setErrors({ general: message });
     } finally {
       setIsLoading(false);
     }
+    */
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

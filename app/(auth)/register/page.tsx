@@ -1,10 +1,10 @@
 import { AuthCard } from '@/components/auth/AuthCard';
-import { RegisterForm } from '@/components/auth/RegisterForm';
+import { RegistrationFlow } from '@/components/auth/RegistrationFlow';
 
 export default function RegisterPage() {
   return (
     <AuthCard title="Create Account" subtitle="Register for a microfinance loan account">
-      <RegisterForm />
+      <RegistrationFlow />
     </AuthCard>
   );
 }
