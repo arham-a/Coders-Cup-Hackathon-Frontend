@@ -159,44 +159,45 @@ export default function ProfilePage() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Profile</h1>
-          <p className="text-gray-600">Manage your personal information</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">My Profile</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage your personal information</p>
         </div>
         {!isEditing ? (
           <button
             onClick={handleEdit}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm sm:text-base w-full sm:w-auto justify-center"
           >
             <Edit className="h-4 w-4" />
             Edit Profile
           </button>
         ) : (
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={handleCancel}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50"
+              className="flex-1 sm:flex-none inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base justify-center"
             >
               <X className="h-4 w-4" />
-              Cancel
+              <span className="hidden sm:inline">Cancel</span>
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+              className="flex-1 sm:flex-none inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 text-sm sm:text-base justify-center"
             >
               {isSaving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Saving...
+                  <span className="hidden sm:inline">Saving...</span>
                 </>
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  Save Changes
+                  <span className="hidden sm:inline">Save Changes</span>
+                  <span className="sm:hidden">Save</span>
                 </>
               )}
             </button>
@@ -219,17 +220,17 @@ export default function ProfilePage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className={`${statusConfig.bg} ${statusConfig.border} border rounded-xl p-6`}
+        className={`${statusConfig.bg} ${statusConfig.border} border rounded-xl p-4 sm:p-6`}
       >
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-full ${statusConfig.bg} ${statusConfig.border} border-2 flex items-center justify-center`}>
-            <StatusIcon className={`h-6 w-6 ${statusConfig.color}`} />
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${statusConfig.bg} ${statusConfig.border} border-2 flex items-center justify-center flex-shrink-0`}>
+            <StatusIcon className={`h-5 w-5 sm:h-6 sm:w-6 ${statusConfig.color}`} />
           </div>
-          <div className="flex-1">
-            <h3 className={`text-lg font-semibold ${statusConfig.color} mb-1`}>
+          <div className="flex-1 min-w-0">
+            <h3 className={`text-base sm:text-lg font-semibold ${statusConfig.color} mb-1`}>
               Account Status: {statusConfig.label}
             </h3>
-            <p className="text-gray-700">
+            <p className="text-sm sm:text-base text-gray-700">
               {user.status === UserStatus.APPROVED && 'Your account is active and you can access all features.'}
               {user.status === UserStatus.PENDING && 'Your account is pending admin approval.'}
               {user.status === UserStatus.REJECTED && 'Your account application was not approved.'}
@@ -242,25 +243,25 @@ export default function ProfilePage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl shadow-lg p-8 text-white"
+        className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl shadow-lg p-6 sm:p-8 text-white"
       >
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 border-4 border-white/30">
-            <UserIcon className="h-12 w-12 text-white" />
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 border-4 border-white/30">
+            <UserIcon className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-3xl font-bold mb-2">{user.fullName}</h2>
-            <div className="flex flex-wrap items-center gap-4 text-green-100">
+          <div className="flex-1 text-center sm:text-left">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">{user.fullName}</h2>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 sm:gap-4 text-sm sm:text-base text-green-100">
               <span className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                {user.email}
+                <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="truncate max-w-[200px] sm:max-w-none">{user.email}</span>
               </span>
               <span className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
+                <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
                 {user.phone}
               </span>
               <span className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
+                <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
                 {user.role}
               </span>
             </div>
@@ -274,50 +275,52 @@ export default function ProfilePage() {
         transition={{ delay: 0.3 }}
         className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
       >
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <IdCard className="h-5 w-5" />
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <IdCard className="h-4 w-4 sm:h-5 sm:w-5" />
             Personal Information
           </h2>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-1">
-              <p className="text-sm text-gray-500">Full Name</p>
-              <p className="text-lg font-semibold text-gray-900">{user.fullName}</p>
+              <p className="text-xs sm:text-sm text-gray-500">Full Name</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900 break-words">{user.fullName}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="text-lg font-semibold text-gray-900">{user.email}</p>
+              <p className="text-xs sm:text-sm text-gray-500">Email</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900 break-all">{user.email}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-gray-500">Phone</p>
+              <p className="text-xs sm:text-sm text-gray-500">Phone</p>
               {isEditing ? (
                 <input
                   type="tel"
                   value={editedUser.phone || ''}
                   onChange={(e) => setEditedUser({ ...editedUser, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="+923001234567"
                 />
               ) : (
-                <p className="text-lg font-semibold text-gray-900">{user.phone}</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">{user.phone}</p>
               )}
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-gray-500">City</p>
-              <p className="text-lg font-semibold text-gray-900">{user.city}</p>
+              <p className="text-xs sm:text-sm text-gray-500">City</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900">{user.city}</p>
             </div>
-            <div className="space-y-1 md:col-span-2">
-              <p className="text-sm text-gray-500">Address</p>
+            <div className="space-y-1 sm:col-span-2">
+              <p className="text-xs sm:text-sm text-gray-500">Address</p>
               {isEditing ? (
                 <textarea
                   value={editedUser.address || ''}
                   onChange={(e) => setEditedUser({ ...editedUser, address: e.target.value })}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter your full address"
                 />
               ) : (
-                <p className="text-lg font-semibold text-gray-900">{user.address}</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">{user.address}</p>
               )}
             </div>
           </div>
@@ -330,44 +333,49 @@ export default function ProfilePage() {
         transition={{ delay: 0.4 }}
         className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
       >
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Briefcase className="h-5 w-5" />
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Briefcase className="h-4 w-4 sm:h-5 sm:w-5" />
             Employment Information
           </h2>
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-1">
-              <p className="text-sm text-gray-500">Employment Type</p>
-              <p className="text-lg font-semibold text-gray-900">{getEmploymentLabel(user.employmentType)}</p>
+              <p className="text-xs sm:text-sm text-gray-500">Employment Type</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900">{getEmploymentLabel(user.employmentType)}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-gray-500">Monthly Income</p>
+              <p className="text-xs sm:text-sm text-gray-500">Monthly Income</p>
               {isEditing ? (
-                <input
-                  type="number"
-                  value={editedUser.monthlyIncome || ''}
-                  onChange={(e) => setEditedUser({ ...editedUser, monthlyIncome: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  min="0"
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm sm:text-base text-gray-600">PKR</span>
+                  <input
+                    type="number"
+                    value={editedUser.monthlyIncome || ''}
+                    onChange={(e) => setEditedUser({ ...editedUser, monthlyIncome: Number(e.target.value) })}
+                    className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    min="0"
+                    placeholder="50000"
+                  />
+                </div>
               ) : (
-                <p className="text-lg font-semibold text-gray-900">PKR {user.monthlyIncome.toLocaleString()}</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">PKR {user.monthlyIncome.toLocaleString()}</p>
               )}
             </div>
             {user.employerName && (
-              <div className="space-y-1 md:col-span-2">
-                <p className="text-sm text-gray-500">Employer Name</p>
+              <div className="space-y-1 sm:col-span-2">
+                <p className="text-xs sm:text-sm text-gray-500">Employer Name</p>
                 {isEditing ? (
                   <input
                     type="text"
                     value={editedUser.employerName || ''}
                     onChange={(e) => setEditedUser({ ...editedUser, employerName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Company name"
                   />
                 ) : (
-                  <p className="text-lg font-semibold text-gray-900">{user.employerName}</p>
+                  <p className="text-base sm:text-lg font-semibold text-gray-900">{user.employerName}</p>
                 )}
               </div>
             )}

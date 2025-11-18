@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -9,9 +8,7 @@ import {
   Receipt, 
   User, 
   Shield, 
-  LogOut,
-  Menu,
-  X
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 
@@ -23,8 +20,11 @@ const menuItems = [
   { icon: User, label: 'Profile', href: '/dashboard/profile' },
 ];
 
-export function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
 
@@ -32,34 +32,14 @@ export function Sidebar() {
     await logout();
   };
 
+  const handleLinkClick = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <>
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
-      >
-        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </button>
-
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-30"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`
-          fixed top-0 left-0 h-screen bg-white border-r border-gray-200 z-40
-          transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0 lg:static lg:h-full
-          w-64 flex flex-col overflow-hidden
-        `}
-      >
+    <aside className="h-screen bg-white border-r border-gray-200 w-64 flex flex-col overflow-hidden">
         {/* Logo */}
         <div className="p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-2">
@@ -83,7 +63,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setIsOpen(false)}
+                onClick={handleLinkClick}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg
                   transition-all duration-200
@@ -115,6 +95,5 @@ export function Sidebar() {
           </button>
         </div>
       </aside>
-    </>
   );
 }
