@@ -241,7 +241,6 @@ export function CreateLoanForm({ userId, userName, riskProfile, onSubmit, onCanc
           disabled={calculated.monthlyInstallment === 0}
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-400 to-amber-500 text-white rounded-lg hover:from-orange-500 hover:to-amber-600 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all font-medium"
         >
-          <DollarSign className="h-5 w-5" />
           Create Loan
         </button>
         <button

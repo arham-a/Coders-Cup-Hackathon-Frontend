@@ -29,8 +29,9 @@ const userMenuItems = [
 const adminMenuItems = [
   { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
   { icon: Users, label: 'Users', href: '/admin/users' },
-  { icon: AlertCircle, label: 'Pending Approvals', href: '/admin/users/pending' },
+  { icon: AlertCircle, label: 'Pending Users', href: '/admin/users/pending' },
   { icon: DollarSign, label: 'Loans', href: '/admin/loans' },
+  { icon: AlertCircle, label: 'Pending Loans', href: '/admin/loans/pending' },
   { icon: Receipt, label: 'Installments', href: '/admin/installments' },
   { icon: AlertCircle, label: 'Overdue', href: '/admin/installments/overdue' },
   { icon: Shield, label: 'Defaults', href: '/admin/installments/defaults' },
