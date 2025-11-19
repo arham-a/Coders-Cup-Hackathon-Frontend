@@ -71,7 +71,7 @@ export default function PendingLoansPage() {
           status: 'PENDING',
           limit: 100,
         });
-        setLoanRequests(response.data.loanRequests.map((req: LoanRequest) => ({
+        setLoanRequests(response.data.loanRequests.map((req: any) => ({
           id: req.id,
           userId: req.user.id,
           userName: req.user.fullName,
@@ -80,12 +80,14 @@ export default function PendingLoansPage() {
           requestedTenure: req.requestedTenure,
           purpose: req.purpose,
           requestedAt: req.createdAt,
-          // These will be loaded separately if needed
-          monthlyIncome: 0,
-          employmentType: 'SALARIED',
-          riskLevel: 'MEDIUM',
-          riskScore: 50,
-          recommendedMaxLoan: req.requestedAmount,
+          // User financial info from API
+          monthlyIncome: req.monthlyIncome || 0,
+          employmentType: req.employmentType || 'SALARIED',
+          // Risk profile data from API
+          riskLevel: req.riskLevel || 'MEDIUM',
+          riskScore: req.riskScore || 50,
+          recommendedMaxLoan: req.recommendedMaxLoan || req.requestedAmount,
+          riskReasons: req.riskReasons || [],
         })));
       } catch (error) {
         console.error('Failed to fetch loan requests, using mock data:', error);
@@ -272,11 +274,11 @@ export default function PendingLoansPage() {
                   ? 'bg-green-50 border-green-200'
                   : 'bg-orange-50 border-orange-200'
               }`}>
-                <p className="text-xs font-semibold mb-1 ${
+                <p className={`text-xs font-semibold mb-1 ${
                   request.requestedAmount <= request.recommendedMaxLoan
                     ? 'text-green-900'
                     : 'text-orange-900'
-                }">
+                }`}>
                   AI Recommendation:
                 </p>
                 <p className={`text-sm ${
@@ -290,6 +292,21 @@ export default function PendingLoansPage() {
                   }
                 </p>
               </div>
+
+              {/* Risk Reasons */}
+              {request.riskReasons && request.riskReasons.length > 0 && (
+                <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <p className="text-xs font-semibold text-purple-900 mb-2">AI Risk Analysis:</p>
+                  <ul className="space-y-1">
+                    {request.riskReasons.map((reason: string, idx: number) => (
+                      <li key={idx} className="text-xs text-purple-800 flex items-start gap-1.5">
+                        <span className="text-purple-500 mt-0.5">•</span>
+                        <span>{reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-4 border-t border-gray-200">

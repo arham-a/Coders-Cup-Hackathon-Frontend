@@ -1,18 +1,41 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Installment } from '@/lib/types/installment';
+import { Installment, InstallmentStatus } from '@/lib/types/installment';
 import { User } from '@/lib/types/user';
-import { Calendar, DollarSign, AlertCircle, User as UserIcon } from 'lucide-react';
+import { Calendar, DollarSign, AlertCircle, User as UserIcon, Send } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
+import { adminService } from '@/lib/services/adminService';
+import { useState } from 'react';
 
 interface InstallmentCardListProps {
   installment: Installment;
   user: User | any;
   index: number;
+  onPaymentLinkSent?: () => void;
 }
 
-export function InstallmentCardList({ installment, user, index }: InstallmentCardListProps) {
+export function InstallmentCardList({ installment, user, index, onPaymentLinkSent }: InstallmentCardListProps) {
+  const [sending, setSending] = useState(false);
+
+  const handleSendPaymentLink = async () => {
+    if (!confirm(`Send payment link to ${user.fullName}?`)) return;
+
+    try {
+      setSending(true);
+      await adminService.sendPaymentLink(installment.id);
+      alert('Payment link sent successfully!');
+      onPaymentLinkSent?.();
+    } catch (error) {
+      console.error('Failed to send payment link:', error);
+      alert('Failed to send payment link. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const canSendPaymentLink = installment.status !== InstallmentStatus.PAID && installment.status !== InstallmentStatus.WAIVED;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -78,6 +101,20 @@ export function InstallmentCardList({ installment, user, index }: InstallmentCar
           </div>
         </div>
       </div>
+
+      {/* Send Payment Link Button */}
+      {canSendPaymentLink && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={handleSendPaymentLink}
+            disabled={sending}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="h-4 w-4" />
+            {sending ? 'Sending...' : 'Send Payment Link'}
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }

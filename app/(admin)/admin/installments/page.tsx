@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { mockAllInstallments, mockLoans, getUserById } from '@/lib/mock/adminMockData';
 import { InstallmentStatus } from '@/lib/types/installment';
-import { Receipt } from 'lucide-react';
+import { Receipt, Send } from 'lucide-react';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { SearchFilter } from '@/components/admin/SearchFilter';
 import { StatsCard } from '@/components/admin/StatsCard';
@@ -93,6 +93,18 @@ export default function InstallmentsPage() {
     );
   }
 
+  const handleSendPaymentLink = async (installmentId: string, userName: string) => {
+    if (!confirm(`Send payment link to ${userName}?`)) return;
+
+    try {
+      await adminService.sendPaymentLink(installmentId);
+      alert('Payment link sent successfully!');
+    } catch (error) {
+      console.error('Failed to send payment link:', error);
+      alert('Failed to send payment link. Please try again.');
+    }
+  };
+
   const columns: Column[] = [
     {
       header: 'User',
@@ -137,6 +149,24 @@ export default function InstallmentsPage() {
     {
       header: 'Status',
       accessor: (installment: any) => <StatusBadge status={installment.status} size="sm" />
+    },
+    {
+      header: 'Actions',
+      accessor: (installment: any) => {
+        const user = installment.user || (() => {
+          const loan = mockLoans.find(l => l.id === installment.loanId);
+          return loan ? getUserById(loan.userId) : null;
+        })();
+        const canSend = installment.status !== InstallmentStatus.PAID && installment.status !== InstallmentStatus.WAIVED;
+        return canSend ? (
+          <button
+            onClick={() => handleSendPaymentLink(installment.id, user?.fullName)}
+            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Send Link
+          </button>
+        ) : null;
+      }
     }
   ];
 

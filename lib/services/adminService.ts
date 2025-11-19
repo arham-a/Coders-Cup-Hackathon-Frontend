@@ -102,6 +102,16 @@ export interface LoanRequest {
   rejectedAt?: string;
   loanId?: string;
   createdAt: string;
+  // User financial info
+  monthlyIncome?: number;
+  employmentType?: string;
+  // Risk profile data
+  riskLevel?: RiskLevel;
+  riskScore?: number;
+  recommendedMaxLoan?: number;
+  recommendedTenure?: number;
+  defaultProbability?: number;
+  riskReasons?: string[];
 }
 
 export interface CreateLoanData {
@@ -675,6 +685,23 @@ export const adminService = {
     message: string;
   }> {
     const response = await apiClient.post('/admin/reminders/overdue');
+    return response.data;
+  },
+
+  /**
+   * Send payment link for a specific installment
+   * POST /api/admin/installments/:installmentId/send-payment-link
+   */
+  async sendPaymentLink(installmentId: string): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      installmentId: string;
+      userEmail: string;
+      remindersSent: number;
+    };
+  }> {
+    const response = await apiClient.post(`/admin/installments/${installmentId}/send-payment-link`);
     return response.data;
   },
 
