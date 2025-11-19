@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-poppins",
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -24,8 +22,30 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={poppins.className}>
         {children}
+        <Script id="role-helper" strategy="afterInteractive">
+          {`
+            if (typeof window !== 'undefined') {
+              window.setUserRole = () => {
+                localStorage.setItem('userRole', 'USER');
+                console.log('✅ Role set to USER - Navigate to /dashboard');
+              };
+              window.setAdminRole = () => {
+                localStorage.setItem('userRole', 'ADMIN');
+                console.log('✅ Role set to ADMIN - Navigate to /admin/dashboard');
+              };
+              window.clearRole = () => {
+                localStorage.removeItem('userRole');
+                console.log('✅ Role cleared');
+              };
+              console.log('%c🎯 Role Helper Available', 'color: #2563EB; font-weight: bold; font-size: 14px;');
+              console.log('%csetUserRole()  - Set USER role', 'color: #059669;');
+              console.log('%csetAdminRole() - Set ADMIN role', 'color: #2563EB;');
+              console.log('%cclearRole()    - Clear role', 'color: #6B7280;');
+            }
+          `}
+        </Script>
       </body>
     </html>
   );

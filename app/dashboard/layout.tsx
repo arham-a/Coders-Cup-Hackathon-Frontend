@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { UserRole, UserStatus } from '@/lib/types/user';
-import { Sidebar } from '@/components/dashboard/Sidebar';
+import Sidebar from '@/components/dashboard/Sidebar';
 import { Menu, X } from 'lucide-react';
-import Image from 'next/image';
 
 export default function DashboardLayout({
   children,

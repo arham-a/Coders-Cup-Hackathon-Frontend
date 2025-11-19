@@ -44,9 +44,9 @@ export function CustomDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg flex items-center justify-between hover:border-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+        className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg flex items-center justify-between hover:border-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent text-sm sm:text-base"
       >
-        <span className="text-gray-900">
+        <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown 
@@ -67,9 +67,9 @@ export function CustomDropdown({
                   onChange(option.value);
                   setIsOpen(false);
                 }}
-                className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors ${
+                className={`w-full px-4 py-2.5 text-left text-sm sm:text-base hover:bg-orange-50 transition-colors ${
                   option.value === value 
-                    ? 'bg-green-50 text-green-700 font-medium' 
+                    ? 'bg-orange-50 text-orange-700 font-medium' 
                     : 'text-gray-700'
                 }`}
               >

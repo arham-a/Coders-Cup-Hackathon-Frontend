@@ -117,7 +117,7 @@ export function RecentInstallments({ installments }: RecentInstallmentsProps) {
                     <h4 className="font-semibold text-gray-900">
                       Installment #{installment.installmentNumber}
                     </h4>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusConfig.bg} ${statusConfig.color} font-medium`}>
+                    <span className={`text-xs font-bold ${statusConfig.color}`}>
                       {statusConfig.label}
                     </span>
                   </div>
