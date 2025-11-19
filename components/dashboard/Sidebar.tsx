@@ -117,8 +117,7 @@ export default function Sidebar({ onClose, isAdmin = false }: SidebarProps) {
         <div className="p-4 border-t border-gray-200 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg w-full
-              text-red-600 hover:bg-red-50 transition-colors duration-200"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-red-600 hover:bg-red-50 transition-colors duration-200"
           >
             <LogOut className="h-5 w-5" />
             <span>Logout</span>
