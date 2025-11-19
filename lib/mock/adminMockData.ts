@@ -410,7 +410,34 @@ export const mockDashboardStats = {
     mediumRisk: mockRiskProfiles.filter(r => r.riskLevel === RiskLevel.MEDIUM).length,
     highRisk: mockRiskProfiles.filter(r => r.riskLevel === RiskLevel.HIGH).length,
     aiPredictedDefaults: mockRiskProfiles.filter(r => r.defaultProbability && r.defaultProbability > 0.5).length
-  }
+  },
+  recentActivity: [
+    {
+      type: 'user_approved',
+      description: 'Ahmed Hassan was approved',
+      timestamp: '2024-11-18T10:30:00.000Z'
+    },
+    {
+      type: 'loan_created',
+      description: 'New loan of PKR 100,000 created for Ahmed Hassan',
+      timestamp: '2024-11-18T09:15:00.000Z'
+    },
+    {
+      type: 'payment_received',
+      description: 'Payment of PKR 8,884 received from Ali Raza',
+      timestamp: '2024-11-17T16:45:00.000Z'
+    },
+    {
+      type: 'installment_overdue',
+      description: 'Installment overdue for loan-001',
+      timestamp: '2024-11-17T14:20:00.000Z'
+    },
+    {
+      type: 'user_pending',
+      description: 'Zainab Ahmed submitted application',
+      timestamp: '2024-11-17T09:00:00.000Z'
+    }
+  ]
 };
 
 // Helper function to get user by ID
