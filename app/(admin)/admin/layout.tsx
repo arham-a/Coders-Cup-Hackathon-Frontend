@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { Menu, X } from 'lucide-react';
 
@@ -26,10 +27,21 @@ export default function AdminLayout({
       {/* Mobile Navbar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-40 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-amber-500 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">ML</span>
+          <div className="w-8 h-8 relative flex-shrink-0">
+            <Image
+              src="/logo.png"
+              alt="LoanPulse Logo"
+              width={32}
+              height={32}
+              className="object-contain"
+              priority
+            />
           </div>
-          <span className="font-bold text-gray-900">MLMS Admin</span>
+          <span className="font-bold">
+            <span className="text-green-600">LOAN</span>
+            <span className="text-orange-500">PULSE</span>
+            <span className="text-gray-900"> Admin</span>
+          </span>
         </div>
         
         <button

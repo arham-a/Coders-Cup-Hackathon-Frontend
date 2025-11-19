@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
   Home, 
@@ -59,23 +60,29 @@ export default function Sidebar({ onClose, isAdmin = false }: SidebarProps) {
   };
 
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
-  const logoColor = isAdmin ? 'from-orange-400 to-amber-500' : 'from-green-600 to-green-800';
-  const activeColor = isAdmin ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-green-50 text-green-700 border-green-100';
-  const activeIconColor = isAdmin ? 'text-orange-500' : 'text-green-600';
-  const activeDotColor = isAdmin ? 'bg-orange-400' : 'bg-green-500';
-
+  const activeColor = isAdmin ? 'bg-orange-500 text-white border-orange-100' : 'bg-green-800 text-white border-green-100';
+  const activeIconColor = isAdmin ? 'text-white' : 'text-white';
+  const HoverColor = isAdmin ? 'hover:bg-orange-200' : 'hover:bg-green-200';
+ 
   return (
     <aside className="h-screen bg-white border-r border-gray-200 w-64 flex flex-col overflow-hidden">
         {/* Logo */}
-        <div className="p-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className={`w-10 h-10 bg-gradient-to-br ${logoColor} rounded-lg flex items-center justify-center`}>
-              <CreditCard className="h-6 w-6 text-white" />
+        <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 relative flex-shrink-0">
+              <Image
+                src="/logo.png"
+                alt="LoanPulse Logo"
+                width={40}
+                height={40}
+                className="object-contain"
+                priority
+              />
             </div>
-            <div>
-              <h1 className="font-bold text-lg text-gray-900">MLMS</h1>
-              <p className="text-xs text-gray-500">Microfinance</p>
-            </div>
+            <h1 className="font-bold text-lg">
+              <span className="text-green-600">LOAN</span>
+              <span className="text-orange-500">PULSE</span>
+            </h1>
           </div>
         </div>
 
@@ -95,15 +102,12 @@ export default function Sidebar({ onClose, isAdmin = false }: SidebarProps) {
                   transition-all duration-200
                   ${isActive 
                     ? `${activeColor} font-medium shadow-sm border` 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    : `text-gray-600 ${HoverColor} hover:text-gray-900`
                   }
                 `}
               >
                 <Icon className={`h-5 w-5 ${isActive ? activeIconColor : ''}`} />
                 <span>{item.label}</span>
-                {isActive && (
-                  <div className={`ml-auto w-1.5 h-1.5 ${activeDotColor} rounded-full animate-pulse`} />
-                )}
               </Link>
             );
           })}

@@ -25,8 +25,8 @@ export default function SettingsPage() {
   const [defaultNotifications, setDefaultNotifications] = useState(true);
 
   // Email Settings State
-  const [fromEmail, setFromEmail] = useState('noreply@mlms.com');
-  const [adminEmail, setAdminEmail] = useState('admin@mlms.com');
+  const [fromEmail, setFromEmail] = useState('noreply@loanpulse.com');
+  const [adminEmail, setAdminEmail] = useState('admin@loanpulse.com');
 
   const [isSaving, setIsSaving] = useState(false);
 
