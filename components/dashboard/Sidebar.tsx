@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 const menuItems = [
   { icon: Home, label: 'Dashboard', href: '/dashboard' },
   { icon: CreditCard, label: 'My Loan', href: '/dashboard/loan' },
+  { icon: CreditCard, label: 'Loan Request', href: '/dashboard/loan-request' },
   { icon: Receipt, label: 'Installments', href: '/dashboard/installments' },
   { icon: Shield, label: 'Risk Profile', href: '/dashboard/risk-profile' },
   { icon: User, label: 'Profile', href: '/dashboard/profile' },

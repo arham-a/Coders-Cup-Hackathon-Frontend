@@ -16,6 +16,7 @@ import {
   Download,
   AlertTriangle
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { apiClient } from '@/lib/api-client';
 import { Installment, InstallmentStatus } from '@/lib/types/installment';
 
@@ -29,11 +30,11 @@ export default function InstallmentDetailPage() {
     const fetchInstallment = async () => {
       try {
         try {
-          const response = await apiClient.get(`/user/installment/${params.id}`);
+          // Correct backend route: /api/users/installment/:id
+          const response = await apiClient.get(`/users/installment/${params.id}`);
           setInstallment(response.data.data);
         } catch (apiError) {
           console.log('API not available, using mock data');
-          // Use mock data if API fails
           const { mockInstallments } = await import('@/lib/mock/mockData');
           const found = mockInstallments.find(i => i.id === params.id);
           if (found) {
@@ -96,6 +97,104 @@ export default function InstallmentDetailPage() {
     }
   };
 
+  const handleDownloadReceipt = () => {
+    if (!installment) return;
+
+    const doc = new jsPDF();
+
+    const marginLeft = 15;
+    let cursorY = 20;
+
+    const addLine = (label: string, value: string, gap = 8) => {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${label}:`, marginLeft, cursorY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, marginLeft + 45, cursorY);
+      cursorY += gap;
+    };
+
+    const formatDate = (dateStr?: string | null) => {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    };
+
+    const statusConfig = getStatusConfig(installment.status);
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Installment Payment Slip', marginLeft, cursorY);
+    cursorY += 10;
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Microfinance Loan Management System', marginLeft, cursorY);
+    cursorY += 10;
+
+    // Horizontal line
+    doc.setLineWidth(0.4);
+    doc.line(marginLeft, cursorY, 195 - marginLeft, cursorY);
+    cursorY += 10;
+
+    // Installment basic info
+    addLine('Installment No.', `#${installment.installmentNumber}`);
+    addLine('Status', statusConfig.label);
+    addLine('Due Date', formatDate(installment.dueDate));
+    addLine('Grace Period End', formatDate(installment.gracePeriodEndDate));
+    addLine('Paid On', installment.paidDate ? formatDate(installment.paidDate) : 'Not paid yet');
+    addLine('Days Overdue', installment.daysOverdue?.toString() ?? '0');
+
+    cursorY += 4;
+    doc.line(marginLeft, cursorY, 195 - marginLeft, cursorY);
+    cursorY += 10;
+
+    // Amount breakdown
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment Breakdown', marginLeft, cursorY);
+    cursorY += 8;
+
+    addLine('Base Amount', `PKR ${installment.amount.toLocaleString()}`);
+    addLine('Fine Amount', `PKR ${installment.fineAmount.toLocaleString()}`);
+    cursorY += 2;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(
+      `Total Due:  PKR ${installment.totalDue.toLocaleString()}`,
+      marginLeft,
+      cursorY
+    );
+    cursorY += 10;
+
+    if (installment.stripeSessionId) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Payment Reference: ${installment.stripeSessionId}`, marginLeft, cursorY);
+      cursorY += 8;
+    }
+
+    // Footer note
+    cursorY += 6;
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(
+      'This is a system-generated payslip for your loan installment. Please keep it for your records.',
+      marginLeft,
+      cursorY,
+      { maxWidth: 180 }
+    );
+
+    // File name
+    const fileName = `installment_${installment.installmentNumber}_payslip.pdf`;
+    doc.save(fileName);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -133,11 +232,8 @@ export default function InstallmentDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Back Button */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-      >
+      {/* Back button */}
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
         <Link
           href="/dashboard/installments"
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -147,7 +243,7 @@ export default function InstallmentDetailPage() {
         </Link>
       </motion.div>
 
-      {/* Page Header */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -165,7 +261,7 @@ export default function InstallmentDetailPage() {
         </div>
       </motion.div>
 
-      {/* Status Alert */}
+      {/* Status alert */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -188,7 +284,7 @@ export default function InstallmentDetailPage() {
         </div>
       </motion.div>
 
-      {/* Payment Amount Card */}
+      {/* Main amount card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -222,41 +318,41 @@ export default function InstallmentDetailPage() {
         </div>
       </motion.div>
 
-      {/* Payment Action */}
-      {(installment.status === InstallmentStatus.PENDING || 
-        installment.status === InstallmentStatus.OVERDUE) && 
+      {/* Pay section */}
+      {(installment.status === InstallmentStatus.PENDING ||
+        installment.status === InstallmentStatus.OVERDUE) &&
         installment.paymentLink && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-        >
-          <div className="flex items-center gap-4">
-            <CreditCard className="h-8 w-8 text-green-600 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                Ready to Pay?
-              </h3>
-              <p className="text-gray-600">
-                Click below to make a secure payment via Stripe
-              </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+          >
+            <div className="flex items-center gap-4">
+              <CreditCard className="h-8 w-8 text-green-600 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  Ready to Pay?
+                </h3>
+                <p className="text-gray-600">
+                  Click below to make a secure payment via Stripe
+                </p>
+              </div>
+              <a
+                href={installment.paymentLink}
+                className={`px-8 py-4 rounded-lg font-semibold text-white transition-colors ${
+                  installment.status === InstallmentStatus.OVERDUE
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                Pay Now
+              </a>
             </div>
-            <a
-              href={installment.paymentLink}
-              className={`px-8 py-4 rounded-lg font-semibold text-white transition-colors ${
-                installment.status === InstallmentStatus.OVERDUE
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              Pay Now
-            </a>
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
 
-      {/* Installment Details */}
+      {/* Installment details */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -277,11 +373,11 @@ export default function InstallmentDetailPage() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Due Date</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {dueDate.toLocaleDateString('en-US', { 
+                  {dueDate.toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
-                    day: 'numeric'
+                    day: 'numeric',
                   })}
                 </p>
               </div>
@@ -293,37 +389,35 @@ export default function InstallmentDetailPage() {
               <div>
                 <p className="text-sm text-gray-500 mb-1">Grace Period Ends</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {gracePeriodEnd.toLocaleDateString('en-US', { 
+                  {gracePeriodEnd.toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
-                    day: 'numeric'
+                    day: 'numeric',
                   })}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                  {installment.daysOverdue > 0 
+                  {installment.daysOverdue > 0
                     ? `Expired ${installment.daysOverdue} days ago`
                     : 'No late fees during grace period'}
                 </p>
               </div>
             </div>
 
-            {/* Paid Date (if paid) */}
+            {/* Paid Date */}
             {installment.paidDate && (
               <div className="flex items-start gap-3">
                 <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Paid On</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    {new Date(installment.paidDate).toLocaleDateString('en-US', { 
+                    {new Date(installment.paidDate).toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
-                      day: 'numeric'
+                      day: 'numeric',
                     })}
                   </p>
-                  <p className="text-xs text-green-600 mt-1">
-                    ✓ Payment successful
-                  </p>
+                  <p className="text-xs text-green-600 mt-1">✓ Payment successful</p>
                 </div>
               </div>
             )}
@@ -342,7 +436,7 @@ export default function InstallmentDetailPage() {
         </div>
       </motion.div>
 
-      {/* Payment Breakdown */}
+      {/* Payment breakdown */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -363,7 +457,7 @@ export default function InstallmentDetailPage() {
                 PKR {installment.amount.toLocaleString()}
               </span>
             </div>
-            
+
             {installment.fineAmount > 0 && (
               <div className="flex items-center justify-between py-3 border-b border-gray-100">
                 <div>
@@ -377,7 +471,7 @@ export default function InstallmentDetailPage() {
                 </span>
               </div>
             )}
-            
+
             <div className="flex items-center justify-between py-4 bg-gray-50 rounded-lg px-4">
               <span className="text-lg font-semibold text-gray-900">Total Amount Due</span>
               <span className="text-2xl font-bold text-green-600">
@@ -388,7 +482,7 @@ export default function InstallmentDetailPage() {
         </div>
       </motion.div>
 
-      {/* Additional Information */}
+      {/* Overdue info */}
       {installment.status === InstallmentStatus.OVERDUE && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -416,6 +510,7 @@ export default function InstallmentDetailPage() {
         </motion.div>
       )}
 
+      {/* Receipt & PDF button */}
       {installment.status === InstallmentStatus.PAID && installment.stripeSessionId && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -423,7 +518,7 @@ export default function InstallmentDetailPage() {
           transition={{ delay: 0.7 }}
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
                 Payment Receipt
@@ -432,9 +527,13 @@ export default function InstallmentDetailPage() {
                 Transaction ID: {installment.stripeSessionId}
               </p>
             </div>
-            <button className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
+            <button
+              type="button"
+              onClick={handleDownloadReceipt}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+            >
               <Download className="h-4 w-4" />
-              Download Receipt
+              Download Payslip (PDF)
             </button>
           </div>
         </motion.div>
