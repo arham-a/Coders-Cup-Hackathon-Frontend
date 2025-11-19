@@ -379,7 +379,7 @@ export default function LoanDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* Card View (Mobile/Tablet) */}
         <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {installments.map((installment, index) => (
+          {installments.map((installment: any, index: number) => (
             <InstallmentDetailCard
               key={installment.id}
               installment={installment}

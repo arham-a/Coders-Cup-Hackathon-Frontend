@@ -8,7 +8,7 @@ import { StatusBadge } from './StatusBadge';
 
 interface InstallmentCardListProps {
   installment: Installment;
-  user: User;
+  user: User | any;
   index: number;
 }
 

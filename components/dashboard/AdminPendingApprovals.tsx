@@ -6,7 +6,7 @@ import { User } from '@/lib/types/user';
 import { UserCircle } from 'lucide-react';
 
 interface AdminPendingApprovalsProps {
-  users: User[];
+  users: User[] | any[];
 }
 
 export function AdminPendingApprovals({ users }: AdminPendingApprovalsProps) {

@@ -7,7 +7,7 @@ import { Mail, Phone } from 'lucide-react';
 
 interface OverdueInstallmentCardProps {
   installment: Installment;
-  user: User;
+  user: User | any;
   index: number;
 }
 

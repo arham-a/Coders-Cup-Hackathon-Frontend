@@ -437,7 +437,40 @@ export const mockDashboardStats = {
       description: 'Zainab Ahmed submitted application',
       timestamp: '2024-11-17T09:00:00.000Z'
     }
-  ]
+  ],
+  pendingUsers: mockUsers
+    .filter(u => u.status === UserStatus.PENDING)
+    .slice(0, 5)
+    .map(u => ({
+      id: u.id,
+      fullName: u.fullName,
+      email: u.email,
+      phone: u.phone,
+      city: u.city,
+      monthlyIncome: u.monthlyIncome,
+      createdAt: u.createdAt
+    })),
+  recentLoans: mockLoans
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5)
+    .map(l => {
+      const user = mockUsers.find(u => u.id === l.userId);
+      return {
+        id: l.id,
+        principalAmount: l.principalAmount,
+        interestRate: l.interestRate,
+        tenureMonths: l.tenureMonths,
+        status: l.status,
+        outstandingBalance: l.outstandingBalance,
+        totalRepaid: l.totalRepaid,
+        createdAt: l.createdAt,
+        user: {
+          id: user?.id || '',
+          fullName: user?.fullName || 'Unknown User',
+          email: user?.email || ''
+        }
+      };
+    })
 };
 
 // Helper function to get user by ID

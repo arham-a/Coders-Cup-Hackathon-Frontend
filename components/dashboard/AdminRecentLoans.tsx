@@ -7,18 +7,21 @@ import { User } from '@/lib/types/user';
 import { DollarSign } from 'lucide-react';
 
 interface AdminRecentLoansProps {
-  loans: Loan[];
-  users: User[];
+  loans: Loan[] | any[];
+  users?: User[];
 }
 
-export function AdminRecentLoans({ loans, users }: AdminRecentLoansProps) {
-  const getStatusColor = (status: LoanStatus) => {
+export function AdminRecentLoans({ loans, users = [] }: AdminRecentLoansProps) {
+  const getStatusColor = (status: LoanStatus | string) => {
     switch (status) {
       case LoanStatus.ACTIVE:
+      case 'ACTIVE':
         return 'text-green-600';
       case LoanStatus.COMPLETED:
+      case 'COMPLETED':
         return 'text-blue-600';
       case LoanStatus.DEFAULTED:
+      case 'DEFAULTED':
         return 'text-red-600';
       default:
         return 'text-gray-600';
@@ -44,7 +47,8 @@ export function AdminRecentLoans({ loans, users }: AdminRecentLoansProps) {
       <div className="space-y-3">
         {loans.length > 0 ? (
           loans.map((loan, index) => {
-            const user = users.find(u => u.id === loan.userId);
+            // Handle both API format (loan.user) and mock format (loan.userId)
+            const userName = loan.user?.fullName || users.find(u => u.id === loan.userId)?.fullName || 'Unknown User';
             return (
               <motion.div
                 key={loan.id}
@@ -54,7 +58,7 @@ export function AdminRecentLoans({ loans, users }: AdminRecentLoansProps) {
                 className="flex items-center justify-between gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{user?.fullName || 'Unknown User'}</p>
+                  <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{userName}</p>
                   <p className="text-xs sm:text-sm text-gray-600">PKR {loan.principalAmount.toLocaleString()}</p>
                 </div>
                 <span className={`text-xs font-bold whitespace-nowrap ${getStatusColor(loan.status)}`}>

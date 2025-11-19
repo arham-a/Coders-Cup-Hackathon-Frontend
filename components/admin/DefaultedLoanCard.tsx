@@ -5,6 +5,7 @@ import { Loan } from '@/lib/types/loan';
 import { User } from '@/lib/types/user';
 import { RiskLevel } from '@/lib/types/risk';
 import { StatusBadge } from './StatusBadge';
+import { DefaultedLoan } from '@/lib/services/adminService';
 
 interface RiskProfile {
   userId: string;
@@ -18,8 +19,8 @@ interface RiskProfile {
 }
 
 interface DefaultedLoanCardProps {
-  loan: Loan;
-  user: User;
+  loan: Loan | DefaultedLoan | any;
+  user: User | any;
   riskProfile?: RiskProfile;
   defaultedCount: number;
   index: number;

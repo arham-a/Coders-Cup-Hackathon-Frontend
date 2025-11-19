@@ -13,7 +13,7 @@ import { AdminRecentLoans } from '@/components/dashboard/AdminRecentLoans';
 import { adminService, DashboardStats } from '@/lib/services/adminService';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats>(mockDashboardStats);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,6 +21,7 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const response = await adminService.getDashboardStats();
+        console.log('Dashboard API Response:', response.data);
         setStats(response.data);
       } catch (error) {
         console.error('Failed to fetch dashboard stats, using mock data:', error);
@@ -33,13 +34,10 @@ export default function AdminDashboard() {
     fetchDashboardStats();
   }, []);
 
-  const recentUsers = mockUsers
-    .filter(u => u.status === UserStatus.PENDING)
-    .slice(0, 5);
-
-  const recentLoans = mockLoans
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+  // If stats not loaded yet, use mock
+  const displayStats = stats || mockDashboardStats;
+  const recentUsers = displayStats.pendingUsers || [];
+  const recentLoans = displayStats.recentLoans || [];
 
   if (loading) {
     return (
@@ -64,46 +62,46 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <AdminStatCard
           title="Total Users"
-          value={stats.users.total}
+          value={displayStats.users.total}
           icon={Users}
-          subtitle={`${stats.users.pending} Pending • ${stats.users.approved} Approved`}
+          subtitle={`${displayStats.users.pending} Pending • ${displayStats.users.approved} Approved`}
           color="orange"
           delay={0}
         />
 
         <AdminStatCard
           title="Active Loans"
-          value={stats.loans.active}
+          value={displayStats.loans.active}
           icon={DollarSign}
-          subtitle={`${stats.loans.completed} Completed • ${stats.loans.defaulted} Defaulted`}
+          subtitle={`${displayStats.loans.completed} Completed • ${displayStats.loans.defaulted} Defaulted`}
           color="green"
           delay={0.1}
         />
 
         <AdminStatCard
           title="Total Disbursed"
-          value={`PKR ${(stats.loans.totalDisbursed / 1000).toFixed(0)}K`}
+          value={`PKR ${(displayStats.loans.totalDisbursed / 1000).toFixed(0)}K`}
           icon={TrendingUp}
-          subtitle={`Collected: PKR ${(stats.loans.totalCollected / 1000).toFixed(0)}K`}
+          subtitle={`Collected: PKR ${(displayStats.loans.totalCollected / 1000).toFixed(0)}K`}
           color="purple"
           delay={0.2}
         />
 
         <AdminStatCard
           title="Outstanding"
-          value={`PKR ${(stats.loans.totalOutstanding / 1000).toFixed(0)}K`}
+          value={`PKR ${(displayStats.loans.totalOutstanding / 1000).toFixed(0)}K`}
           icon={TrendingDown}
-          subtitle={`${stats.installments.overdue} Overdue Installments`}
+          subtitle={`${displayStats.installments.overdue} Overdue Installments`}
           color="red"
           delay={0.3}
         />
       </div>
 
       {/* Installments Overview */}
-      <AdminMetricsGrid metrics={stats.installments} />
+      <AdminMetricsGrid metrics={displayStats.installments} />
 
       {/* Risk Distribution */}
-      <AdminRiskDistribution risk={stats.risk} />
+      <AdminRiskDistribution risk={displayStats.risk} />
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

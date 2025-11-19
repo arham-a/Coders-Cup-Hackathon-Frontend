@@ -16,7 +16,7 @@ export interface PaginationParams {
 export interface PaginatedResponse<T> {
   success: boolean;
   data: {
-    [key: string]: T[];
+    [key: string]: T[] | any;
     pagination: {
       currentPage: number;
       totalPages: number;
@@ -58,6 +58,30 @@ export interface DashboardStats {
     type: string;
     description: string;
     timestamp: string;
+  }>;
+  pendingUsers: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    city: string;
+    monthlyIncome: number;
+    createdAt: string;
+  }>;
+  recentLoans: Array<{
+    id: string;
+    principalAmount: number;
+    interestRate: number;
+    tenureMonths: number;
+    status: string;
+    outstandingBalance: number;
+    totalRepaid: number;
+    createdAt: string;
+    user: {
+      id: string;
+      fullName: string;
+      email: string;
+    };
   }>;
 }
 
@@ -131,6 +155,8 @@ export interface DefaultedLoan {
   principalAmount: number;
   outstandingBalance: number;
   totalFines: number;
+  totalRepaid: number;
+  status: string;
   defaultedAt: string;
   daysInDefault: number;
   missedInstallments: number;

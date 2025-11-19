@@ -108,8 +108,8 @@ export default function DefaultedLoansPage() {
           />
         ) : (
           defaultedLoans.map((loan, index) => {
-            const user = getUserById(loan.userId);
-            const riskProfile = getRiskProfileByUserId(loan.userId);
+            const user = loan.user;
+            const riskProfile = getRiskProfileByUserId(user.id);
             const loanInstallments = mockAllInstallments.filter(i => i.loanId === loan.id);
             const defaultedCount = loanInstallments.filter(i => i.status === InstallmentStatus.DEFAULTED).length;
 
