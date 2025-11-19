@@ -1,7 +1,8 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { getUserById, getLoansByUserId, getRiskProfileByUserId } from '@/lib/mock/adminMockData';
+import { adminService } from '@/lib/services/adminService';
 import { UserStatus } from '@/lib/types/user';
 import { LoanStatus } from '@/lib/types/loan';
 import { 
@@ -15,7 +16,11 @@ import {
   MapPin,
   Briefcase,
   Calendar,
-  Building
+  Building,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -29,10 +34,45 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const router = useRouter();
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
   
-  const user = getUserById(id);
-  const userLoans = getLoansByUserId(id);
-  const riskProfile = getRiskProfileByUserId(id);
+  // Fallback to mock data
+  const mockUser = getUserById(id);
+  const mockLoans = getLoansByUserId(id);
+  const mockRiskProfile = getRiskProfileByUserId(id);
+
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const response = await adminService.getUserById(id);
+        setUserData(response.data);
+      } catch (error) {
+        console.error('Failed to fetch user details:', error);
+        // Using mock data as fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserDetails();
+  }, [id]);
+
+  const user = userData?.user || mockUser;
+  const userLoans = userData?.loans || mockLoans;
+  const riskProfile = userData?.riskProfile || mockRiskProfile;
+  const loanStats = userData?.loanStats;
+  const installmentStats = userData?.installmentStats;
+  const paymentBehavior = userData?.paymentBehavior;
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-orange-500 border-r-transparent"></div>
+        <p className="text-gray-600 mt-4">Loading user details...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -49,24 +89,43 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  const handleApprove = () => {
-    alert('User approved successfully! (Mock action)');
-    router.push('/admin/users/pending');
-  };
-
-  const handleReject = () => {
-    const reason = prompt('Enter rejection reason:');
-    if (reason) {
-      alert('User rejected successfully! (Mock action)');
+  const handleApprove = async () => {
+    try {
+      await adminService.approveUser(id);
+      alert('User approved successfully!');
       router.push('/admin/users/pending');
+    } catch (error) {
+      console.error('Failed to approve user:', error);
+      alert('Failed to approve user. Please try again.');
     }
   };
 
-  const handleCreateLoan = (data: any) => {
-    console.log('Creating loan:', data);
-    alert('Loan created successfully! (Mock action)');
-    setIsLoanModalOpen(false);
-    router.refresh();
+  const handleReject = async () => {
+    const reason = prompt('Enter rejection reason:');
+    if (reason) {
+      try {
+        await adminService.rejectUser(id, reason);
+        alert('User rejected successfully!');
+        router.push('/admin/users/pending');
+      } catch (error) {
+        console.error('Failed to reject user:', error);
+        alert('Failed to reject user. Please try again.');
+      }
+    }
+  };
+
+  const handleCreateLoan = async (data: any) => {
+    try {
+      await adminService.createLoan(id, data);
+      alert('Loan created successfully!');
+      setIsLoanModalOpen(false);
+      // Refresh user data
+      const response = await adminService.getUserById(id);
+      setUserData(response.data);
+    } catch (error) {
+      console.error('Failed to create loan:', error);
+      alert('Failed to create loan. Please try again.');
+    }
   };
 
   const getStatusBadge = (status: UserStatus) => {
@@ -147,6 +206,157 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       {/* User Information */}
       <InfoCard title="Personal Information" items={userInfo} delay={0.2} />
 
+      {/* Overview Stats */}
+      {loanStats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        >
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+              <span className="text-2xl font-bold text-blue-900">{loanStats.total}</span>
+            </div>
+            <p className="text-sm text-blue-700 font-medium">Total Loans</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              <span className="text-2xl font-bold text-green-900">{loanStats.active}</span>
+            </div>
+            <p className="text-sm text-green-700 font-medium">Active Loans</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <CheckCircle className="h-5 w-5 text-purple-600" />
+              <span className="text-2xl font-bold text-purple-900">{loanStats.completed}</span>
+            </div>
+            <p className="text-sm text-purple-700 font-medium">Completed</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span className="text-2xl font-bold text-red-900">{loanStats.defaulted}</span>
+            </div>
+            <p className="text-sm text-red-700 font-medium">Defaulted</p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Financial Overview */}
+      {loanStats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Financial Overview</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Total Borrowed</p>
+              <p className="text-xl font-bold text-gray-900">PKR {loanStats.totalBorrowed.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Outstanding</p>
+              <p className="text-xl font-bold text-orange-600">PKR {loanStats.totalOutstanding.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Total Repaid</p>
+              <p className="text-xl font-bold text-green-600">PKR {loanStats.totalRepaid.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Total Fines</p>
+              <p className="text-xl font-bold text-red-600">PKR {loanStats.totalFines.toLocaleString()}</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Payment Behavior */}
+      {paymentBehavior && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Behavior</h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">On-Time Payment Rate</span>
+              <div className="flex items-center gap-3">
+                <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full"
+                    style={{ width: `${paymentBehavior.onTimeRate}%` }}
+                  />
+                </div>
+                <span className="font-bold text-green-600">{paymentBehavior.onTimeRate}%</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">{paymentBehavior.totalPayments}</p>
+                <p className="text-sm text-gray-600 mt-1">Total Payments</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">{paymentBehavior.onTimePayments}</p>
+                <p className="text-sm text-gray-600 mt-1">On-Time</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-yellow-600">{paymentBehavior.latePayments}</p>
+                <p className="text-sm text-gray-600 mt-1">Late</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-600">{paymentBehavior.missedPayments}</p>
+                <p className="text-sm text-gray-600 mt-1">Missed</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Installment Stats */}
+      {installmentStats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Installment Overview</h2>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="text-center p-4 bg-gray-50 rounded-lg">
+              <p className="text-3xl font-bold text-gray-900">{installmentStats.total}</p>
+              <p className="text-sm text-gray-600 mt-2">Total</p>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <p className="text-3xl font-bold text-green-600">{installmentStats.paid}</p>
+              <p className="text-sm text-gray-600 mt-2">Paid</p>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <p className="text-3xl font-bold text-blue-600">{installmentStats.pending}</p>
+              <p className="text-sm text-gray-600 mt-2">Pending</p>
+            </div>
+            <div className="text-center p-4 bg-yellow-50 rounded-lg">
+              <p className="text-3xl font-bold text-yellow-600">{installmentStats.overdue}</p>
+              <p className="text-sm text-gray-600 mt-2">Overdue</p>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-lg">
+              <p className="text-3xl font-bold text-red-600">{installmentStats.defaulted}</p>
+              <p className="text-sm text-gray-600 mt-2">Defaulted</p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Risk Profile */}
       {riskProfile && (
         <RiskProfileCard
@@ -155,7 +365,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           defaultProbability={riskProfile.defaultProbability || 0}
           recommendedMaxLoan={riskProfile.recommendedMaxLoan || 0}
           riskReasons={riskProfile.riskReasons}
-          delay={0.3}
+          delay={0.45}
         />
       )}
 
@@ -163,7 +373,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.5 }}
         className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -255,6 +465,51 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         )}
       </motion.div>
+
+      {/* Recent Payments */}
+      {userData?.recentPayments && userData.recentPayments.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
+        >
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Recent Payments</h2>
+          <div className="space-y-3">
+            {userData.recentPayments.map((payment: any, index: number) => (
+              <div 
+                key={payment.id} 
+                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-orange-200 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    payment.status === 'COMPLETED' ? 'bg-green-100' :
+                    payment.status === 'PENDING' ? 'bg-yellow-100' :
+                    'bg-red-100'
+                  }`}>
+                    <DollarSign className={`h-4 w-4 ${
+                      payment.status === 'COMPLETED' ? 'text-green-600' :
+                      payment.status === 'PENDING' ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">PKR {payment.amount.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">{payment.type} • {new Date(payment.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 text-xs rounded-lg font-medium ${
+                  payment.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                  payment.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+                }`}>
+                  {payment.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Create Loan Modal */}
       <Modal

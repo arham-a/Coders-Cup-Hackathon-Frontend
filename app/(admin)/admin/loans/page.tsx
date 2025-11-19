@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { mockLoans, getUserById } from '@/lib/mock/adminMockData';
 import { LoanStatus } from '@/lib/types/loan';
 import { DollarSign, Eye } from 'lucide-react';
@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Pagination } from '@/components/admin/Pagination';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { adminService, LoanWithUser } from '@/lib/services/adminService';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -21,19 +22,46 @@ export default function LoansPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<LoanStatus | 'ALL'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [loans, setLoans] = useState<LoanWithUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
   const router = useRouter();
 
-  const filteredLoans = useMemo(() => {
-    return mockLoans.filter(loan => {
-      const user = getUserById(loan.userId);
-      const matchesSearch = user?.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           loan.id.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'ALL' || loan.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [searchTerm, statusFilter]);
+  // Fetch loans from API
+  useEffect(() => {
+    const fetchLoans = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getLoans({
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        });
+        
+        setLoans(response.data.loans);
+        setTotalCount(response.data.pagination.totalCount);
+      } catch (error) {
+        console.error('Failed to fetch loans, using mock data:', error);
+        // Fall back to mock data
+        const filtered = mockLoans.filter(loan => {
+          const user = getUserById(loan.userId);
+          const matchesSearch = user?.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                               loan.id.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesStatus = statusFilter === 'ALL' || loan.status === statusFilter;
+          return matchesSearch && matchesStatus;
+        });
+        setLoans(filtered as any);
+        setTotalCount(filtered.length);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const totalPages = Math.ceil(filteredLoans.length / ITEMS_PER_PAGE);
+    fetchLoans();
+  }, [statusFilter, currentPage, searchTerm]);
+
+  const filteredLoans = loans;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   // Reset to page 1 when filters change
   useMemo(() => {
@@ -51,17 +79,26 @@ export default function LoansPage() {
     { value: LoanStatus.DEFAULTED, label: 'Defaulted' }
   ];
 
-  const activeCount = mockLoans.filter(l => l.status === LoanStatus.ACTIVE).length;
-  const completedCount = mockLoans.filter(l => l.status === LoanStatus.COMPLETED).length;
-  const defaultedCount = mockLoans.filter(l => l.status === LoanStatus.DEFAULTED).length;
+  const activeCount = loans.filter(l => l.status === LoanStatus.ACTIVE).length;
+  const completedCount = loans.filter(l => l.status === LoanStatus.COMPLETED).length;
+  const defaultedCount = loans.filter(l => l.status === LoanStatus.DEFAULTED).length;
 
-
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading loans...</p>
+        </div>
+      </div>
+    );
+  }
 
   const columns: Column[] = [
     {
       header: 'Borrower',
       accessor: (loan: any) => {
-        const user = getUserById(loan.userId);
+        const user = loan.user || getUserById(loan.userId);
         return (
           <div>
             <p className="font-medium text-gray-900 text-sm">{user?.fullName}</p>
@@ -140,7 +177,7 @@ export default function LoansPage() {
           {/* Card View (Mobile/Tablet) */}
           <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
             {paginatedLoansForCards.map((loan, index) => {
-              const user = getUserById(loan.userId);
+              const user = loan.user || getUserById(loan.userId);
               if (!user) return null;
               return (
                 <LoanCard

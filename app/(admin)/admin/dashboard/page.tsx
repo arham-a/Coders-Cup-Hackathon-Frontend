@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import { useEffect, useState } from 'react';
 import { Users, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { mockDashboardStats, mockUsers, mockLoans } from '@/lib/mock/adminMockData';
 import { UserStatus } from '@/lib/types/user';
@@ -9,9 +10,28 @@ import { AdminMetricsGrid } from '@/components/dashboard/AdminMetricsGrid';
 import { AdminRiskDistribution } from '@/components/dashboard/AdminRiskDistribution';
 import { AdminPendingApprovals } from '@/components/dashboard/AdminPendingApprovals';
 import { AdminRecentLoans } from '@/components/dashboard/AdminRecentLoans';
+import { adminService, DashboardStats } from '@/lib/services/adminService';
 
 export default function AdminDashboard() {
-  const stats = mockDashboardStats;
+  const [stats, setStats] = useState<DashboardStats>(mockDashboardStats);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getDashboardStats();
+        setStats(response.data);
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats, using mock data:', error);
+        setStats(mockDashboardStats);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
 
   const recentUsers = mockUsers
     .filter(u => u.status === UserStatus.PENDING)
@@ -20,6 +40,17 @@ export default function AdminDashboard() {
   const recentLoans = mockLoans
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

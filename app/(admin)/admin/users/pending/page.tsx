@@ -1,30 +1,73 @@
 ﻿'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { mockUsers } from '@/lib/mock/adminMockData';
 import { UserStatus } from '@/lib/types/user';
 import { CheckCircle, Clock, UserCheck } from 'lucide-react';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { PendingUserCard } from '@/components/admin/PendingUserCard';
 import { motion } from 'framer-motion';
+import { adminService, UserWithRisk } from '@/lib/services/adminService';
 
 export default function PendingApprovalsPage() {
-  const [users, setUsers] = useState(mockUsers.filter(u => u.status === UserStatus.PENDING));
+  const [users, setUsers] = useState<UserWithRisk[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleApprove = (userId: string) => {
-    // Mock approval
-    setUsers(users.filter(u => u.id !== userId));
-    alert('User approved successfully! (Mock action)');
-  };
+  useEffect(() => {
+    const fetchPendingUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getUsers({
+          status: UserStatus.PENDING,
+          limit: 100, // Get all pending users
+        });
+        setUsers(response.data.users);
+      } catch (error) {
+        console.error('Failed to fetch pending users, using mock data:', error);
+        setUsers(mockUsers.filter(u => u.status === UserStatus.PENDING));
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleReject = (userId: string) => {
-    // Mock rejection
-    const reason = prompt('Enter rejection reason:');
-    if (reason) {
+    fetchPendingUsers();
+  }, []);
+
+  const handleApprove = async (userId: string) => {
+    try {
+      await adminService.approveUser(userId);
       setUsers(users.filter(u => u.id !== userId));
-      alert('User rejected successfully! (Mock action)');
+      alert('User approved successfully!');
+    } catch (error) {
+      console.error('Failed to approve user:', error);
+      alert('Failed to approve user. Please try again.');
     }
   };
+
+  const handleReject = async (userId: string) => {
+    const reason = prompt('Enter rejection reason:');
+    if (!reason) return;
+
+    try {
+      await adminService.rejectUser(userId, reason);
+      setUsers(users.filter(u => u.id !== userId));
+      alert('User rejected successfully!');
+    } catch (error) {
+      console.error('Failed to reject user:', error);
+      alert('Failed to reject user. Please try again.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading pending users...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

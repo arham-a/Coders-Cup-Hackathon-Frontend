@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState } from 'react';
-import { Bell, Shield, DollarSign, Mail, Save } from 'lucide-react';
+import { Bell, Shield, DollarSign, Mail, Save, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SettingSection } from '@/components/admin/settings/SettingSection';
 import { SettingInput } from '@/components/admin/settings/SettingInput';
@@ -128,6 +128,45 @@ export default function SettingsPage() {
             checked={defaultNotifications}
             onChange={setDefaultNotifications}
           />
+          
+          {/* Manual Trigger Buttons */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-sm font-medium text-gray-700 mb-3">Manual Triggers</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const { adminService } = await import('@/lib/services/adminService');
+                    await adminService.triggerInstallmentReminders();
+                    alert('Installment reminders triggered successfully!');
+                  } catch (error) {
+                    console.error('Failed to trigger reminders:', error);
+                    alert('Failed to trigger reminders. Please try again.');
+                  }
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <Bell className="h-4 w-4" />
+                Send Payment Reminders
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const { adminService } = await import('@/lib/services/adminService');
+                    await adminService.triggerOverdueNotices();
+                    alert('Overdue notices triggered successfully!');
+                  } catch (error) {
+                    console.error('Failed to trigger overdue notices:', error);
+                    alert('Failed to trigger overdue notices. Please try again.');
+                  }
+                }}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Send Overdue Notices
+              </button>
+            </div>
+          </div>
         </div>
       </SettingSection>
 

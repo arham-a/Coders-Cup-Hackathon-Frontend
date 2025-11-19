@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { mockAllInstallments, mockLoans, getUserById } from '@/lib/mock/adminMockData';
 import { InstallmentStatus } from '@/lib/types/installment';
 import { Receipt } from 'lucide-react';
@@ -12,6 +12,7 @@ import { InstallmentCardList } from '@/components/admin/InstallmentCardList';
 import { Pagination } from '@/components/admin/Pagination';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { motion } from 'framer-motion';
+import { adminService, InstallmentWithDetails } from '@/lib/services/adminService';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -19,19 +20,46 @@ export default function InstallmentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InstallmentStatus | 'ALL'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [installments, setInstallments] = useState<InstallmentWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const filteredInstallments = useMemo(() => {
-    return mockAllInstallments.filter(installment => {
-      const loan = mockLoans.find(l => l.id === installment.loanId);
-      const user = loan ? getUserById(loan.userId) : null;
-      const matchesSearch = user?.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           installment.id.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'ALL' || installment.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [searchTerm, statusFilter]);
+  // Fetch installments from API
+  useEffect(() => {
+    const fetchInstallments = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getInstallments({
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        });
+        
+        setInstallments(response.data.installments);
+        setTotalCount(response.data.pagination.totalCount);
+      } catch (error) {
+        console.error('Failed to fetch installments, using mock data:', error);
+        // Fall back to mock data
+        const filtered = mockAllInstallments.filter(installment => {
+          const loan = mockLoans.find(l => l.id === installment.loanId);
+          const user = loan ? getUserById(loan.userId) : null;
+          const matchesSearch = user?.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                               installment.id.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesStatus = statusFilter === 'ALL' || installment.status === statusFilter;
+          return matchesSearch && matchesStatus;
+        });
+        setInstallments(filtered as any);
+        setTotalCount(filtered.length);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const totalPages = Math.ceil(filteredInstallments.length / ITEMS_PER_PAGE);
+    fetchInstallments();
+  }, [statusFilter, currentPage, searchTerm]);
+
+  const filteredInstallments = installments;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   // Reset to page 1 when filters change
   useMemo(() => {
@@ -50,18 +78,29 @@ export default function InstallmentsPage() {
     { value: InstallmentStatus.DEFAULTED, label: 'Defaulted' }
   ];
 
-  const pendingCount = mockAllInstallments.filter(i => i.status === InstallmentStatus.PENDING).length;
-  const paidCount = mockAllInstallments.filter(i => i.status === InstallmentStatus.PAID).length;
-  const overdueCount = mockAllInstallments.filter(i => i.status === InstallmentStatus.OVERDUE).length;
+  const pendingCount = installments.filter(i => i.status === InstallmentStatus.PENDING).length;
+  const paidCount = installments.filter(i => i.status === InstallmentStatus.PAID).length;
+  const overdueCount = installments.filter(i => i.status === InstallmentStatus.OVERDUE).length;
 
-
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading installments...</p>
+        </div>
+      </div>
+    );
+  }
 
   const columns: Column[] = [
     {
       header: 'User',
       accessor: (installment: any) => {
-        const loan = mockLoans.find(l => l.id === installment.loanId);
-        const user = loan ? getUserById(loan.userId) : null;
+        const user = installment.user || (() => {
+          const loan = mockLoans.find(l => l.id === installment.loanId);
+          return loan ? getUserById(loan.userId) : null;
+        })();
         return (
           <div>
             <p className="font-medium text-gray-900 text-sm">{user?.fullName}</p>
@@ -130,8 +169,10 @@ export default function InstallmentsPage() {
           {/* Card View (Mobile/Tablet) */}
           <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
             {paginatedInstallmentsForCards.map((installment, index) => {
-              const loan = mockLoans.find(l => l.id === installment.loanId);
-              const user = loan ? getUserById(loan.userId) : null;
+              const user = installment.user || (() => {
+                const loan = mockLoans.find(l => l.id === installment.loanId);
+                return loan ? getUserById(loan.userId) : null;
+              })();
               if (!user) return null;
               return (
                 <InstallmentCardList

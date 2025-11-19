@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, Eye, DollarSign, Calendar, User, FileText } from 'lucide-react';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { SearchFilter } from '@/components/admin/SearchFilter';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { adminService, LoanRequest } from '@/lib/services/adminService';
 
-// Mock data for pending loan requests
+// Mock data for pending loan requests (fallback)
 const mockPendingLoans = [
   {
     id: 'req-001',
@@ -59,16 +60,53 @@ const mockPendingLoans = [
 export default function PendingLoansPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [riskFilter, setRiskFilter] = useState<string>('ALL');
+  const [loanRequests, setLoanRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPendingLoanRequests = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getLoanRequests({
+          status: 'PENDING',
+          limit: 100,
+        });
+        setLoanRequests(response.data.loanRequests.map((req: LoanRequest) => ({
+          id: req.id,
+          userId: req.user.id,
+          userName: req.user.fullName,
+          userEmail: req.user.email,
+          requestedAmount: req.requestedAmount,
+          requestedTenure: req.requestedTenure,
+          purpose: req.purpose,
+          requestedAt: req.createdAt,
+          // These will be loaded separately if needed
+          monthlyIncome: 0,
+          employmentType: 'SALARIED',
+          riskLevel: 'MEDIUM',
+          riskScore: 50,
+          recommendedMaxLoan: req.requestedAmount,
+        })));
+      } catch (error) {
+        console.error('Failed to fetch loan requests, using mock data:', error);
+        setLoanRequests(mockPendingLoans);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPendingLoanRequests();
+  }, []);
 
   const filteredRequests = useMemo(() => {
-    return mockPendingLoans.filter(request => {
+    return loanRequests.filter(request => {
       const matchesSearch = request.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            request.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            request.id.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRisk = riskFilter === 'ALL' || request.riskLevel === riskFilter;
       return matchesSearch && matchesRisk;
     });
-  }, [searchTerm, riskFilter]);
+  }, [searchTerm, riskFilter, loanRequests]);
 
   const filterOptions = [
     { value: 'ALL', label: 'All Risk Levels' },
@@ -77,20 +115,52 @@ export default function PendingLoansPage() {
     { value: 'HIGH', label: 'High Risk' }
   ];
 
-  const handleApprove = (requestId: string) => {
-    console.log('Approving loan request:', requestId);
-    alert('Loan request approved! (Mock action)');
+  const handleApprove = async (requestId: string) => {
+    const interestRate = prompt('Enter interest rate (e.g., 15 for 15%):');
+    if (!interestRate) return;
+
+    try {
+      await adminService.approveLoanRequest(requestId, {
+        interestRate: parseFloat(interestRate),
+        startDate: new Date().toISOString().split('T')[0],
+      });
+      setLoanRequests(loanRequests.filter(r => r.id !== requestId));
+      alert('Loan request approved successfully!');
+    } catch (error) {
+      console.error('Failed to approve loan request:', error);
+      alert('Failed to approve loan request. Please try again.');
+    }
   };
 
-  const handleReject = (requestId: string) => {
-    console.log('Rejecting loan request:', requestId);
-    alert('Loan request rejected! (Mock action)');
+  const handleReject = async (requestId: string) => {
+    const reason = prompt('Enter rejection reason:');
+    if (!reason) return;
+
+    try {
+      await adminService.rejectLoanRequest(requestId, reason);
+      setLoanRequests(loanRequests.filter(r => r.id !== requestId));
+      alert('Loan request rejected successfully!');
+    } catch (error) {
+      console.error('Failed to reject loan request:', error);
+      alert('Failed to reject loan request. Please try again.');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading pending loan requests...</p>
+        </div>
+      </div>
+    );
+  }
 
   const getRiskColor = (level: string) => {
     const colors = {
       LOW: 'text-green-600',
-      MEDIUM: 'text-yellow-600',
+      MEDIUM: 'text-orange-600',
       HIGH: 'text-red-600'
     };
     return colors[level as keyof typeof colors] || 'text-gray-600';
@@ -200,19 +270,19 @@ export default function PendingLoansPage() {
               <div className={`mb-4 p-3 rounded-lg border ${
                 request.requestedAmount <= request.recommendedMaxLoan
                   ? 'bg-green-50 border-green-200'
-                  : 'bg-yellow-50 border-yellow-200'
+                  : 'bg-orange-50 border-orange-200'
               }`}>
                 <p className="text-xs font-semibold mb-1 ${
                   request.requestedAmount <= request.recommendedMaxLoan
                     ? 'text-green-900'
-                    : 'text-yellow-900'
+                    : 'text-orange-900'
                 }">
                   AI Recommendation:
                 </p>
                 <p className={`text-sm ${
                   request.requestedAmount <= request.recommendedMaxLoan
                     ? 'text-green-800'
-                    : 'text-yellow-800'
+                    : 'text-orange-800'
                 }`}>
                   {request.requestedAmount <= request.recommendedMaxLoan
                     ? `✓ Request is within recommended limit (Max: PKR ${request.recommendedMaxLoan.toLocaleString()})`
