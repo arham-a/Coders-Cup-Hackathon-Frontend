@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import { useState, useEffect } from 'react';
 import { mockLoans, mockAllInstallments } from '@/lib/mock/adminMockData';
 import { TrendingDown, Clock, Target, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -11,17 +12,40 @@ import { RepaymentTrendChart } from '@/components/admin/charts/RepaymentTrendCha
 import { IncomeVsDefaultChart } from '@/components/admin/charts/IncomeVsDefaultChart';
 import { PaymentBehaviorChart } from '@/components/admin/charts/PaymentBehaviorChart';
 import { InsightCard } from '@/components/admin/InsightCard';
+import { adminService } from '@/lib/services/adminService';
 
 export default function AnalyticsPage() {
-  // Calculate default rate by tenure
-  const tenureGroups = [
-    { range: '6 months', min: 0, max: 6 },
-    { range: '12 months', min: 7, max: 12 },
-    { range: '18 months', min: 13, max: 18 },
-    { range: '24 months', min: 19, max: 30 }
-  ];
+  const [loading, setLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
 
-  const defaultRateByTenure = tenureGroups.map(group => {
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getAnalytics();
+        setAnalyticsData(response.data);
+      } catch (error) {
+        console.error('Failed to fetch analytics, using mock data:', error);
+        // Fall back to calculating from mock data
+        calculateMockAnalytics();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, []);
+
+  const calculateMockAnalytics = () => {
+    // Calculate mock analytics (existing logic)
+    const tenureGroups = [
+      { range: '6 months', min: 0, max: 6 },
+      { range: '12 months', min: 7, max: 12 },
+      { range: '18 months', min: 13, max: 18 },
+      { range: '24 months', min: 19, max: 30 }
+    ];
+
+    const defaultRateByTenure = tenureGroups.map(group => {
     const loansInRange = mockLoans.filter(l => l.tenureMonths >= group.min && l.tenureMonths <= group.max);
     const defaultedInRange = loansInRange.filter(l => l.status === LoanStatus.DEFAULTED).length;
     return {
@@ -124,9 +148,54 @@ export default function AnalyticsPage() {
     return sum + (l.principalAmount / estimatedIncome);
   }, 0) / mockLoans.length;
 
-  const earlyDefaultRate = mockLoans.filter(l => 
-    l.status === LoanStatus.DEFAULTED && l.tenureMonths <= 12
-  ).length / mockLoans.filter(l => l.tenureMonths <= 12).length * 100 || 0;
+    const earlyDefaultRate = mockLoans.filter(l => 
+      l.status === LoanStatus.DEFAULTED && l.tenureMonths <= 12
+    ).length / mockLoans.filter(l => l.tenureMonths <= 12).length * 100 || 0;
+
+    setAnalyticsData({
+      insights: {
+        avgDaysToDefault,
+        collectionEfficiency,
+        avgLoanToIncome,
+        earlyDefaultRate,
+      },
+      defaultRateByTenure,
+      loanSizeDistribution,
+      repaymentTrend,
+      incomeVsDefault,
+      paymentBehavior,
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analyticsData) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <p className="text-gray-600">No analytics data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const {
+    insights,
+    defaultRateByTenure,
+    loanSizeDistribution,
+    repaymentTrend,
+    incomeVsDefault,
+    paymentBehavior,
+  } = analyticsData;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -140,7 +209,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <InsightCard
           title="Avg Days to Default"
-          value={`${avgDaysToDefault.toFixed(0)} days`}
+          value={`${insights.avgDaysToDefault} days`}
           insight="Average time before payment defaults"
           icon={Clock}
           trend="down"
@@ -148,15 +217,15 @@ export default function AnalyticsPage() {
         />
         <InsightCard
           title="Collection Efficiency"
-          value={`${collectionEfficiency.toFixed(1)}%`}
+          value={`${insights.collectionEfficiency}%`}
           insight="Actual vs expected collections"
           icon={Target}
-          trend={collectionEfficiency >= 95 ? 'up' : 'neutral'}
+          trend={insights.collectionEfficiency >= 95 ? 'up' : 'neutral'}
           delay={0.15}
         />
         <InsightCard
           title="Loan-to-Income Ratio"
-          value={`${avgLoanToIncome.toFixed(1)}x`}
+          value={`${insights.avgLoanToIncome}x`}
           insight="Average loan size vs monthly income"
           icon={TrendingDown}
           trend="neutral"
@@ -164,7 +233,7 @@ export default function AnalyticsPage() {
         />
         <InsightCard
           title="Early Default Rate"
-          value={`${earlyDefaultRate.toFixed(1)}%`}
+          value={`${insights.earlyDefaultRate}%`}
           insight="Defaults within first 12 months"
           icon={AlertCircle}
           trend="down"

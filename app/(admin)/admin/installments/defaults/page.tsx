@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import { useState, useEffect } from 'react';
 import { mockAllInstallments, mockLoans, getUserById, getRiskProfileByUserId } from '@/lib/mock/adminMockData';
 import { InstallmentStatus } from '@/lib/types/installment';
 import { LoanStatus } from '@/lib/types/loan';
@@ -8,15 +9,60 @@ import { motion } from 'framer-motion';
 import { AdminStatCard } from '@/components/dashboard/AdminStatCard';
 import { DefaultedLoanCard } from '@/components/admin/DefaultedLoanCard';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { adminService, DefaultedLoan } from '@/lib/services/adminService';
 
 export default function DefaultedLoansPage() {
+  const [defaultedLoans, setDefaultedLoans] = useState<DefaultedLoan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState({
+    totalDefaulted: 0,
+    totalOutstanding: 0,
+    averageDefaultTime: 0,
+  });
+
+  useEffect(() => {
+    const fetchDefaultedLoans = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getDefaultedLoans();
+        setDefaultedLoans(response.data.defaultedLoans);
+        setSummary(response.data.summary);
+      } catch (error) {
+        console.error('Failed to fetch defaulted loans, using mock data:', error);
+        const mockDefaultedLoans = mockLoans.filter(l => l.status === LoanStatus.DEFAULTED);
+        const mockInstallments = mockAllInstallments.filter(
+          i => i.status === InstallmentStatus.DEFAULTED
+        );
+        setDefaultedLoans(mockDefaultedLoans as any);
+        setSummary({
+          totalDefaulted: mockDefaultedLoans.length,
+          totalOutstanding: mockDefaultedLoans.reduce((sum, l) => sum + l.outstandingBalance, 0),
+          averageDefaultTime: 0,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDefaultedLoans();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading defaulted loans...</p>
+        </div>
+      </div>
+    );
+  }
+
   const defaultedInstallments = mockAllInstallments.filter(
     i => i.status === InstallmentStatus.DEFAULTED
   );
   
-  const defaultedLoans = mockLoans.filter(l => l.status === LoanStatus.DEFAULTED);
-
-  const totalOutstanding = defaultedLoans.reduce((sum, l) => sum + l.outstandingBalance, 0);
+  const totalOutstanding = summary.totalOutstanding;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -30,7 +76,7 @@ export default function DefaultedLoansPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
         <AdminStatCard
           title="Defaulted Loans"
-          value={defaultedLoans.length.toString()}
+          value={summary.totalDefaulted.toString()}
           icon={AlertTriangle}
           color="red"
           delay={0.1}
@@ -43,8 +89,8 @@ export default function DefaultedLoansPage() {
           delay={0.2}
         />
         <AdminStatCard
-          title="Defaulted Installments"
-          value={defaultedInstallments.length.toString()}
+          title="Avg Days in Default"
+          value={Math.round(summary.averageDefaultTime).toString()}
           icon={Shield}
           color="orange"
           delay={0.3}

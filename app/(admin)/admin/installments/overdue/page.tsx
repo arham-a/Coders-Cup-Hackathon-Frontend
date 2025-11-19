@@ -1,16 +1,50 @@
 ﻿'use client';
 
+import { useState, useEffect } from 'react';
 import { mockAllInstallments, mockLoans, getUserById } from '@/lib/mock/adminMockData';
 import { InstallmentStatus } from '@/lib/types/installment';
 import { AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { OverdueInstallmentCard } from '@/components/admin/OverdueInstallmentCard';
 import { EmptyState } from '@/components/admin/EmptyState';
+import { adminService, InstallmentWithDetails } from '@/lib/services/adminService';
 
 export default function OverdueInstallmentsPage() {
-  const overdueInstallments = mockAllInstallments.filter(
-    i => i.status === InstallmentStatus.OVERDUE
-  );
+  const [overdueInstallments, setOverdueInstallments] = useState<InstallmentWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOverdueInstallments = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getInstallments({
+          status: InstallmentStatus.OVERDUE,
+          limit: 100,
+        });
+        setOverdueInstallments(response.data.installments);
+      } catch (error) {
+        console.error('Failed to fetch overdue installments, using mock data:', error);
+        setOverdueInstallments(mockAllInstallments.filter(
+          i => i.status === InstallmentStatus.OVERDUE
+        ) as any);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOverdueInstallments();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading overdue installments...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -47,8 +81,10 @@ export default function OverdueInstallmentsPage() {
           />
         ) : (
           overdueInstallments.map((installment, index) => {
-            const loan = mockLoans.find(l => l.id === installment.loanId);
-            const user = loan ? getUserById(loan.userId) : null;
+            const user = installment.user || (() => {
+              const loan = mockLoans.find(l => l.id === installment.loanId);
+              return loan ? getUserById(loan.userId) : null;
+            })();
 
             if (!user) return null;
 

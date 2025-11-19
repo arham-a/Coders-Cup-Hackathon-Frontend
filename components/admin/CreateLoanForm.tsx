@@ -66,7 +66,7 @@ export function CreateLoanForm({ userId, userName, riskProfile, onSubmit, onCanc
   const getRiskColor = (level: string) => {
     const colors = {
       HIGH: 'from-red-400 to-rose-500',
-      MEDIUM: 'from-yellow-400 to-amber-500',
+      MEDIUM: 'from-orange-400 to-orange-600',
       LOW: 'from-green-400 to-emerald-500'
     };
     return colors[level as keyof typeof colors] || 'from-gray-400 to-slate-500';

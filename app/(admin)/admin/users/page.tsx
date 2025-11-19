@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { mockUsers, mockRiskProfiles, getUserById, getRiskProfileByUserId } from '@/lib/mock/adminMockData';
 import { UserStatus } from '@/lib/types/user';
 import { Users } from 'lucide-react';
@@ -14,6 +14,7 @@ import { Pagination } from '@/components/admin/Pagination';
 import { Modal } from '@/components/ui/Modal';
 import { CreateLoanForm } from '@/components/admin/CreateLoanForm';
 import { motion } from 'framer-motion';
+import { adminService, UserWithRisk } from '@/lib/services/adminService';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -23,18 +24,46 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [users, setUsers] = useState<UserWithRisk[]>(mockUsers);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const filteredUsers = useMemo(() => {
-    return mockUsers.filter(user => {
-      const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           user.phone.includes(searchTerm);
-      const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [searchTerm, statusFilter]);
+  // Fetch users from API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await adminService.getUsers({
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          search: searchTerm || undefined,
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        });
+        
+        setUsers(response.data.users);
+        setTotalCount(response.data.pagination.totalCount);
+      } catch (error) {
+        console.error('Failed to fetch users, using mock data:', error);
+        // Fall back to mock data filtering
+        const filtered = mockUsers.filter(user => {
+          const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                               user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                               user.phone.includes(searchTerm);
+          const matchesStatus = statusFilter === 'ALL' || user.status === statusFilter;
+          return matchesSearch && matchesStatus;
+        });
+        setUsers(filtered);
+        setTotalCount(filtered.length);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+    fetchUsers();
+  }, [searchTerm, statusFilter, currentPage]);
+
+  const filteredUsers = users;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   // Reset to page 1 when filters change
   useMemo(() => {
@@ -48,18 +77,26 @@ export default function UsersPage() {
     { value: UserStatus.REJECTED, label: 'Rejected' }
   ];
 
-  const pendingCount = mockUsers.filter(u => u.status === UserStatus.PENDING).length;
-  const approvedCount = mockUsers.filter(u => u.status === UserStatus.APPROVED).length;
-  const rejectedCount = mockUsers.filter(u => u.status === UserStatus.REJECTED).length;
+  const pendingCount = users.filter(u => u.status === UserStatus.PENDING).length;
+  const approvedCount = users.filter(u => u.status === UserStatus.APPROVED).length;
+  const rejectedCount = users.filter(u => u.status === UserStatus.REJECTED).length;
 
   // Create risk profiles map for table
   const riskProfilesMap = useMemo(() => {
     const map = new Map();
+    users.forEach(user => {
+      if (user.riskLevel) {
+        map.set(user.id, user.riskLevel);
+      }
+    });
+    // Fallback to mock data
     mockRiskProfiles.forEach(profile => {
-      map.set(profile.userId, profile.riskLevel);
+      if (!map.has(profile.userId)) {
+        map.set(profile.userId, profile.riskLevel);
+      }
     });
     return map;
-  }, []);
+  }, [users]);
 
   // Paginated users for cards (mobile/tablet)
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -70,15 +107,68 @@ export default function UsersPage() {
     setIsLoanModalOpen(true);
   };
 
-  const handleLoanSubmit = (data: any) => {
-    console.log('Creating loan:', data);
-    alert('Loan created successfully! (Mock action)');
-    setIsLoanModalOpen(false);
-    setSelectedUserId(null);
+  const handleLoanSubmit = async (data: any) => {
+    if (!selectedUserId) return;
+    
+    try {
+      await adminService.createLoan(selectedUserId, {
+        principalAmount: data.principalAmount,
+        interestRate: data.interestRate,
+        tenureMonths: data.tenureMonths,
+        startDate: data.startDate,
+        notes: data.notes,
+      });
+      alert('Loan created successfully!');
+      setIsLoanModalOpen(false);
+      setSelectedUserId(null);
+    } catch (error) {
+      console.error('Failed to create loan:', error);
+      alert('Failed to create loan. Please try again.');
+    }
   };
 
-  const selectedUser = selectedUserId ? getUserById(selectedUserId) : null;
+  const handleApproveUser = async (userId: string) => {
+    try {
+      await adminService.approveUser(userId);
+      alert('User approved successfully!');
+      // Refresh the users list
+      setCurrentPage(1);
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to approve user:', error);
+      alert('Failed to approve user. Please try again.');
+    }
+  };
+
+  const handleRejectUser = async (userId: string) => {
+    const reason = prompt('Please enter rejection reason:');
+    if (!reason) return;
+
+    try {
+      await adminService.rejectUser(userId, reason);
+      alert('User rejected successfully!');
+      // Refresh the users list
+      setCurrentPage(1);
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to reject user:', error);
+      alert('Failed to reject user. Please try again.');
+    }
+  };
+
+  const selectedUser = selectedUserId ? users.find(u => u.id === selectedUserId) || getUserById(selectedUserId) : null;
   const selectedUserRiskProfile = selectedUserId ? getRiskProfileByUserId(selectedUserId) : null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
