@@ -16,48 +16,54 @@ import { motion } from 'framer-motion';
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
+
   const [loan, setLoan] = useState<Loan | null>(null);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchDashboard = async () => {
       try {
         setLoading(true);
-        
-        // Try to fetch loan data from API
+
+        /** ----------------------------------------
+         * 1) GET USER LOAN
+         * GET /api/users/loan
+         * ---------------------------------------- */
         try {
-          const loanResponse = await apiClient.get('/user/loan');
-          setLoan(loanResponse.data.data);
-        } catch (apiError) {
-          console.log('API not available, using mock data');
-          // Use mock data if API fails
-          const { mockLoan } = await import('@/lib/mock/mockData');
-          setLoan(mockLoan);
+          const loanRes = await apiClient.get('/users/loan');
+          setLoan(loanRes.data.data || null);
+        } catch (err) {
+          console.error('Failed to fetch loan:', err);
+          setLoan(null);
         }
 
-        // Try to fetch installments from API
+        /** ----------------------------------------
+         * 2) GET USER INSTALLMENTS
+         * GET /api/users/installments?limit=5
+         * ---------------------------------------- */
         try {
-          const installmentsResponse = await apiClient.get('/user/installments', {
-            params: { limit: 5 }
+          const instRes = await apiClient.get('/users/installments', {
+            params: { limit: 5 },
           });
-          setInstallments(installmentsResponse.data.data.installments || []);
-        } catch (apiError) {
-          console.log('API not available, using mock data');
-          // Use mock data if API fails
-          const { mockInstallments } = await import('@/lib/mock/mockData');
-          setInstallments(mockInstallments.slice(0, 5));
+          setInstallments(instRes.data.data.installments || []);
+        } catch (err) {
+          console.error('Failed to fetch installments:', err);
+          setInstallments([]);
         }
       } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
+        console.error('Dashboard load error:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardData();
+    fetchDashboard();
   }, []);
 
+  /** ----------------------------------------
+   * UI LOADING STATE
+   * ---------------------------------------- */
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -69,47 +75,67 @@ export default function DashboardPage() {
     );
   }
 
-  // Calculate stats
-  const pendingInstallments = installments.filter(i => i.status === 'PENDING').length;
-  const overdueInstallments = installments.filter(i => i.status === 'OVERDUE').length;
-  const nextPaymentDue = installments.find(i => i.status === 'PENDING');
+  /** ----------------------------------------
+   * CALCULATED METRICS
+   * ---------------------------------------- */
+  const pendingInstallments = installments.filter(
+    (i) => i.status === 'PENDING'
+  ).length;
 
-  // Stats card configuration with navigation
-  const overdueColor: 'red' | 'green' = overdueInstallments > 0 ? 'red' : 'green';
-  
+  const overdueInstallments = installments.filter(
+    (i) => i.status === 'OVERDUE'
+  ).length;
+
+  const nextPaymentDue = installments.find((i) => i.status === 'PENDING');
+
+  /** ----------------------------------------
+   * STAT CARDS CONFIG
+   * ---------------------------------------- */
+  const overdueColor: 'red' | 'green' =
+    overdueInstallments > 0 ? 'red' : 'green';
+
   const statsCards = [
     {
       title: 'Outstanding Balance',
-      value: loan ? `PKR ${loan.outstandingBalance.toLocaleString()}` : 'N/A',
+      value: loan
+        ? `PKR ${loan.outstandingBalance.toLocaleString()}`
+        : 'N/A',
       icon: DollarSign,
       description: loan ? 'Remaining loan amount' : 'No active loan',
-      color: 'green' as 'green',
-      link: '/dashboard/loan'
+      color: 'green' as const,
+      link: '/dashboard/loan',
     },
     {
       title: 'Monthly Payment',
-      value: loan ? `PKR ${loan.monthlyInstallment.toLocaleString()}` : 'N/A',
+      value: loan
+        ? `PKR ${loan.monthlyInstallment.toLocaleString()}`
+        : 'N/A',
       icon: Calendar,
       description: loan ? 'Due every month' : 'No active loan',
-      color: 'blue' as 'blue',
-      link: '/dashboard/loan'
+      color: 'blue' as const,
+      link: '/dashboard/loan',
     },
     {
       title: 'Pending Payments',
       value: pendingInstallments,
       icon: TrendingUp,
-      description: `${pendingInstallments} installment${pendingInstallments !== 1 ? 's' : ''} pending`,
-      color: 'yellow' as 'yellow',
-      link: '/dashboard/installments'
+      description: `${pendingInstallments} installment${
+        pendingInstallments !== 1 ? 's' : ''
+      } pending`,
+      color: 'yellow' as const,
+      link: '/dashboard/installments',
     },
     {
       title: 'Overdue',
       value: overdueInstallments,
       icon: AlertCircle,
-      description: overdueInstallments > 0 ? 'Requires immediate attention' : 'All payments on track',
+      description:
+        overdueInstallments > 0
+          ? 'Requires immediate attention'
+          : 'All payments on track',
       color: overdueColor,
-      link: '/dashboard/installments'
-    }
+      link: '/dashboard/installments',
+    },
   ];
 
   return (
@@ -117,9 +143,9 @@ export default function DashboardPage() {
       {/* Welcome Banner */}
       <WelcomeBanner userName={user?.fullName || 'User'} />
 
-      {/* Stats Grid */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {statsCards.map((card, index) => (
+        {statsCards.map((card, idx) => (
           <ClickableStatCard
             key={card.title}
             title={card.title}
@@ -128,14 +154,14 @@ export default function DashboardPage() {
             description={card.description}
             color={card.color}
             link={card.link}
-            delay={index * 0.1}
+            delay={idx * 0.1}
           />
         ))}
       </div>
 
-      {/* Main Content Grid */}
+      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Loan Summary - Takes 2 columns on large screens */}
+        {/* Loan Summary */}
         <div className="lg:col-span-2">
           <LoanSummary loan={loan} />
         </div>
@@ -147,25 +173,33 @@ export default function DashboardPage() {
           transition={{ delay: 0.4 }}
           className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6"
         >
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Next Payment</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">
+            Next Payment
+          </h3>
+
           {nextPaymentDue ? (
             <div className="space-y-4">
+              {/* Due Date */}
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-1">Due Date</p>
                 <p className="text-base sm:text-lg font-bold text-gray-900">
                   {new Date(nextPaymentDue.dueDate).toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
-                    year: 'numeric'
+                    year: 'numeric',
                   })}
                 </p>
               </div>
+
+              {/* Amount */}
               <div>
                 <p className="text-xs sm:text-sm text-gray-500 mb-1">Amount</p>
                 <p className="text-xl sm:text-2xl font-bold text-green-600">
                   PKR {nextPaymentDue.totalDue.toLocaleString()}
                 </p>
               </div>
+
+              {/* Payment Button */}
               {nextPaymentDue.paymentLink && (
                 <a
                   href={nextPaymentDue.paymentLink}
@@ -174,6 +208,7 @@ export default function DashboardPage() {
                   Pay Now
                 </a>
               )}
+
               <button
                 onClick={() => router.push('/dashboard/installments')}
                 className="block w-full text-center px-4 py-2.5 sm:py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"

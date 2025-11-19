@@ -25,17 +25,22 @@ export default function InstallmentsPage() {
   useEffect(() => {
     const fetchInstallments = async () => {
       try {
-        try {
-          const response = await apiClient.get('/user/installments');
-          setInstallments(response.data.data.installments || []);
-        } catch (apiError) {
-          console.log('API not available, using mock data');
-          // Use mock data if API fails
-          const { mockInstallments } = await import('@/lib/mock/mockData');
-          setInstallments(mockInstallments);
-        }
-      } catch (error) {
-        console.error('Failed to fetch installments:', error);
+        // REAL BACKEND ROUTE
+        const response = await apiClient.get('/users/installments', {
+          params: {
+            page: 1,
+            limit: 50
+          }
+        });
+
+        // Correct API shape:
+        // { success: true, data: { installments: [] } }
+        setInstallments(response.data.data.installments || []);
+
+      } catch (apiError) {
+        console.error('API unavailable, loading mock data…');
+        const { mockInstallments } = await import('@/lib/mock/mockData');
+        setInstallments(mockInstallments);
       } finally {
         setLoading(false);
       }
@@ -83,8 +88,10 @@ export default function InstallmentsPage() {
 
   const filteredInstallments = installments.filter(inst => {
     const matchesFilter = filter === 'ALL' || inst.status === filter;
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch =
+      searchTerm === '' ||
       inst.installmentNumber.toString().includes(searchTerm);
+
     return matchesFilter && matchesSearch;
   });
 
@@ -108,16 +115,13 @@ export default function InstallmentsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Installments</h1>
         <p className="text-gray-600">Track and manage your loan installments</p>
       </motion.div>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <ClickableStatCard
           title="Total"
@@ -126,7 +130,6 @@ export default function InstallmentsPage() {
           color="indigo"
           delay={0.1}
         />
-
         <ClickableStatCard
           title="Paid"
           value={stats.paid}
@@ -134,7 +137,6 @@ export default function InstallmentsPage() {
           color="green"
           delay={0.2}
         />
-
         <ClickableStatCard
           title="Pending"
           value={stats.pending}
@@ -142,7 +144,6 @@ export default function InstallmentsPage() {
           color="blue"
           delay={0.3}
         />
-
         <ClickableStatCard
           title="Overdue"
           value={stats.overdue}
@@ -172,7 +173,7 @@ export default function InstallmentsPage() {
             />
           </div>
 
-          {/* Filter */}
+          {/* Status Filter */}
           <div className="w-full sm:w-48">
             <CustomDropdown
               options={[
@@ -183,7 +184,7 @@ export default function InstallmentsPage() {
                 { value: InstallmentStatus.DEFAULTED, label: 'Defaulted' },
               ]}
               value={filter}
-              onChange={(value) => setFilter(value as InstallmentStatus | 'ALL')}
+              onChange={(value) => setFilter(value as any)}
               placeholder="Filter by status"
             />
           </div>
@@ -202,9 +203,9 @@ export default function InstallmentsPage() {
             <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Installments Found</h3>
             <p className="text-gray-500">
-              {filter !== 'ALL' 
+              {filter !== 'ALL'
                 ? `No installments with status "${filter}"`
-                : 'You don\'t have any installments yet'}
+                : "You don't have any installments yet"}
             </p>
           </div>
         ) : (
@@ -213,9 +214,10 @@ export default function InstallmentsPage() {
               const statusConfig = getStatusConfig(installment.status);
               const StatusIcon = statusConfig.icon;
               const dueDate = new Date(installment.dueDate);
-              const hasPaymentLink = (installment.status === InstallmentStatus.PENDING || 
-                                     installment.status === InstallmentStatus.OVERDUE) && 
-                                     installment.paymentLink;
+              const hasPaymentLink =
+                (installment.status === InstallmentStatus.PENDING ||
+                  installment.status === InstallmentStatus.OVERDUE) &&
+                installment.paymentLink;
 
               return (
                 <motion.div
@@ -223,16 +225,16 @@ export default function InstallmentsPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  onClick={() => router.push(`/dashboard/installments/${installment.id}`)}
+                  onClick={() =>
+                    router.push(`/dashboard/installments/${installment.id}`)
+                  }
                   className="p-4 sm:p-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer group"
                 >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    {/* Status Icon */}
                     <div className="flex items-center justify-center flex-shrink-0">
                       <StatusIcon className={`h-8 w-8 sm:h-10 sm:w-10 ${statusConfig.color}`} />
                     </div>
 
-                    {/* Content */}
                     <div className="flex-1 min-w-0 w-full">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -243,8 +245,7 @@ export default function InstallmentsPage() {
                             {statusConfig.label}
                           </span>
                         </div>
-                        
-                        {/* Amount - Desktop */}
+
                         <div className="hidden sm:block text-right">
                           <p className="text-xl sm:text-2xl font-bold text-gray-900">
                             PKR {installment.totalDue.toLocaleString()}
@@ -257,18 +258,19 @@ export default function InstallmentsPage() {
                         </div>
                       </div>
 
-                      {/* Details */}
                       <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                           Due: {dueDate.toLocaleDateString()}
                         </span>
+
                         {installment.paidDate && (
                           <span className="flex items-center gap-1 text-green-600">
                             <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
                             Paid: {new Date(installment.paidDate).toLocaleDateString()}
                           </span>
                         )}
+
                         {installment.daysOverdue > 0 && (
                           <span className="flex items-center gap-1 text-red-600 font-medium">
                             <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -277,20 +279,20 @@ export default function InstallmentsPage() {
                         )}
                       </div>
 
-                      {/* Amount - Mobile */}
+                      {/* MOBILE VALUE */}
                       <div className="sm:hidden mt-3 flex items-center justify-between">
                         <div>
                           <p className="text-xl font-bold text-gray-900">
                             PKR {installment.totalDue.toLocaleString()}
                           </p>
+
                           {installment.fineAmount > 0 && (
                             <p className="text-xs text-red-600">
                               +PKR {installment.fineAmount.toLocaleString()} fine
                             </p>
                           )}
                         </div>
-                        
-                        {/* Pay Now Button - Mobile */}
+
                         {hasPaymentLink && (
                           <a
                             href={installment.paymentLink}
@@ -307,7 +309,6 @@ export default function InstallmentsPage() {
                       </div>
                     </div>
 
-                    {/* Pay Now Button - Desktop */}
                     {hasPaymentLink && (
                       <a
                         href={installment.paymentLink}
@@ -319,7 +320,13 @@ export default function InstallmentsPage() {
                         }`}
                       >
                         Pay Now
-                        <span className={installment.status === InstallmentStatus.OVERDUE ? 'text-red-200' : 'text-green-200'}>
+                        <span
+                          className={
+                            installment.status === InstallmentStatus.OVERDUE
+                              ? 'text-red-200'
+                              : 'text-green-200'
+                          }
+                        >
                           →
                         </span>
                       </a>

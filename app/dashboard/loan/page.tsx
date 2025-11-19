@@ -21,17 +21,12 @@ export default function LoanPage() {
   useEffect(() => {
     const fetchLoan = async () => {
       try {
-        try {
-          const response = await apiClient.get('/user/loan');
-          setLoan(response.data.data);
-        } catch (apiError) {
-          console.log('API not available, using mock data');
-          // Use mock data if API fails
-          const { mockLoan } = await import('@/lib/mock/mockData');
-          setLoan(mockLoan);
-        }
+        // IMPORTANT: Correct real backend API route
+        const response = await apiClient.get('/users/loan');
+        setLoan(response.data.data);
       } catch (error) {
         console.error('Failed to fetch loan:', error);
+        setLoan(null);
       } finally {
         setLoading(false);
       }
@@ -82,15 +77,12 @@ export default function LoanPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Loan Details</h1>
         <p className="text-gray-600">Complete overview of your active loan</p>
       </motion.div>
 
-      {/* Loan Summary Card */}
+      {/* Loan Summary */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -106,15 +98,18 @@ export default function LoanPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-green-100 text-sm mb-2">Principal Amount</p>
-              <h2 className="text-4xl font-bold">PKR {loan.principalAmount.toLocaleString()}</h2>
+              <h2 className="text-4xl font-bold">
+                PKR {loan.principalAmount.toLocaleString()}
+              </h2>
             </div>
+
             <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
               <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
               <span className="text-sm font-medium">{loan.status}</span>
             </div>
           </div>
 
-          {/* Progress Bar */}
+          {/* Progress */}
           <div className="mb-6">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-green-100">Repayment Progress</span>
@@ -130,7 +125,7 @@ export default function LoanPage() {
             </div>
           </div>
 
-          {/* Quick Stats */}
+          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
               <p className="text-xs text-green-100 mb-1">Total Amount</p>
@@ -152,9 +147,9 @@ export default function LoanPage() {
         </div>
       </motion.div>
 
-      {/* Loan Details Grid */}
+      {/* Loan Detail Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Payment Information */}
+        {/* Payment Info */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -165,6 +160,7 @@ export default function LoanPage() {
             <DollarSign className="h-5 w-5 text-green-600" />
             Payment Information
           </h3>
+
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600">Monthly Installment</span>
@@ -187,7 +183,7 @@ export default function LoanPage() {
           </div>
         </motion.div>
 
-        {/* Timeline Information */}
+        {/* Timeline */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -199,6 +195,7 @@ export default function LoanPage() {
             Timeline
           </h3>
           <div className="space-y-4">
+            {/* Start */}
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600">Start Date</span>
               <span className="font-semibold text-gray-900">
@@ -209,6 +206,8 @@ export default function LoanPage() {
                 })}
               </span>
             </div>
+
+            {/* End */}
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600">End Date</span>
               <span className="font-semibold text-gray-900">
@@ -219,6 +218,8 @@ export default function LoanPage() {
                 })}
               </span>
             </div>
+
+            {/* Created */}
             <div className="flex justify-between items-center py-3 border-b border-gray-100">
               <span className="text-gray-600">Created On</span>
               <span className="font-semibold text-gray-900">
@@ -229,15 +230,19 @@ export default function LoanPage() {
                 })}
               </span>
             </div>
+
+            {/* Status */}
             <div className="flex justify-between items-center py-3">
               <span className="text-gray-600">Status</span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                loan.status === LoanStatus.ACTIVE 
-                  ? 'bg-green-100 text-green-700'
-                  : loan.status === LoanStatus.COMPLETED
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-red-100 text-red-700'
-              }`}>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  loan.status === LoanStatus.ACTIVE
+                    ? 'bg-green-100 text-green-700'
+                    : loan.status === LoanStatus.COMPLETED
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-red-100 text-red-700'
+                }`}
+              >
                 {loan.status}
               </span>
             </div>
@@ -245,7 +250,7 @@ export default function LoanPage() {
         </motion.div>
       </div>
 
-      {/* Installment Schedule */}
+      {/* Installment Table */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -258,6 +263,7 @@ export default function LoanPage() {
             Installment Schedule
           </h3>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -276,16 +282,19 @@ export default function LoanPage() {
                 </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-200">
               {loan.installmentSchedule.map((schedule, index) => {
                 const isPast = new Date(schedule.dueDate) < new Date();
-                const isCurrent = new Date(schedule.dueDate).getMonth() === new Date().getMonth();
-                
+                const isCurrent =
+                  new Date(schedule.dueDate).getMonth() === new Date().getMonth();
+
                 return (
                   <tr key={index} className={isCurrent ? 'bg-green-50' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       Month {schedule.month}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {new Date(schedule.dueDate).toLocaleDateString('en-US', {
                         month: 'short',
@@ -293,9 +302,11 @@ export default function LoanPage() {
                         year: 'numeric'
                       })}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                       PKR {schedule.amount.toLocaleString()}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {isPast ? (
                         <span className="flex items-center gap-1 text-green-600">

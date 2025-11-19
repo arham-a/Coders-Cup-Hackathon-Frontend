@@ -1,93 +1,165 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   User as UserIcon,
   Mail,
   Phone,
-  MapPin,
-  Briefcase,
-  DollarSign,
-  Calendar,
   Shield,
   Edit,
   Save,
   X,
   CheckCircle,
   Clock,
-  Building2,
-  Home,
   AlertCircle,
-  MapPinned,
-  IdCard
+  IdCard,
+  Briefcase,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { User, UserStatus, EmploymentType } from '@/lib/types/user';
-import { mockUser } from '@/lib/mock/mockData';
 
 export default function ProfilePage() {
+  const router = useRouter();
+
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editedUser, setEditedUser] = useState<Partial<User>>({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
+  // =========================
+  // Helper: get access token
+  // =========================
+  const getAccessToken = () => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('accessToken');
+  };
+
+  // =========================
+  // Fetch profile from backend
+  // =========================
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await apiClient.get('/user/profile');
+        const token = getAccessToken();
+        if (!token) {
+          setErrorMessage('You are not logged in. Please sign in again.');
+          setLoading(false);
+          router.push('/login');
+          return;
+        }
+
+        const response = await apiClient.get('/users/profile', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         setUser(response.data.data);
-      } catch (apiError) {
-        console.log('API not available, using mock data');
-        setUser(mockUser);
+        setErrorMessage('');
+      } catch (error: any) {
+        console.error('Failed to load profile:', error);
+        const msg =
+          error?.response?.data?.message ||
+          'Failed to load profile from server. Please try again.';
+        setErrorMessage(msg);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // =========================
+  // Edit & Save handlers
+  // =========================
   const handleEdit = () => {
+    if (!user) return;
     setIsEditing(true);
     setEditedUser({
-      phone: user?.phone,
-      address: user?.address,
-      monthlyIncome: user?.monthlyIncome,
-      employerName: user?.employerName,
+      phone: user.phone,
+      address: user.address,
+      monthlyIncome: user.monthlyIncome,
+      employerName: user.employerName,
     });
     setSuccessMessage('');
+    setErrorMessage('');
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     setEditedUser({});
     setSuccessMessage('');
+    setErrorMessage('');
   };
 
   const handleSave = async () => {
+    if (!user) return;
+
     setIsSaving(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+
     try {
-      try {
-        const response = await apiClient.put('/user/profile', editedUser);
-        setUser(response.data.data);
-        setSuccessMessage('Profile updated successfully!');
-      } catch (apiError) {
-        console.log('API not available, simulating update');
-        setUser({ ...user!, ...editedUser });
-        setSuccessMessage('Profile updated successfully! (Mock Mode)');
+      const token = getAccessToken();
+      if (!token) {
+        setErrorMessage('You are not logged in. Please sign in again.');
+        router.push('/login');
+        return;
       }
+
+      // Only send allowed fields: phone, address, monthlyIncome, employerName
+      const payload: {
+        phone?: string;
+        address?: string;
+        monthlyIncome?: number;
+        employerName?: string;
+      } = {};
+
+      if (typeof editedUser.phone !== 'undefined') {
+        payload.phone = editedUser.phone;
+      }
+      if (typeof editedUser.address !== 'undefined') {
+        payload.address = editedUser.address;
+      }
+      if (typeof editedUser.monthlyIncome !== 'undefined') {
+        payload.monthlyIncome = Number(editedUser.monthlyIncome);
+      }
+      if (typeof editedUser.employerName !== 'undefined') {
+        payload.employerName = editedUser.employerName;
+      }
+
+      const response = await apiClient.put('/users/profile', payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setUser(response.data.data);
       setIsEditing(false);
+      setSuccessMessage('Profile updated successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update profile:', error);
+      const msg =
+        error?.response?.data?.message ||
+        'Failed to update profile. Please try again.';
+      setErrorMessage(msg);
     } finally {
       setIsSaving(false);
     }
   };
 
+  // =========================
+  // UI helpers
+  // =========================
   const getStatusConfig = (status: UserStatus) => {
     switch (status) {
       case UserStatus.APPROVED:
@@ -128,6 +200,9 @@ export default function ProfilePage() {
     return labels[type];
   };
 
+  // =========================
+  // Loading & empty states
+  // =========================
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -144,8 +219,12 @@ export default function ProfilePage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <AlertCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Profile Not Found</h3>
-          <p className="text-gray-500">Unable to load your profile information.</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Profile Not Found
+          </h3>
+          <p className="text-gray-500">
+            {errorMessage || 'Unable to load your profile information.'}
+          </p>
         </div>
       </div>
     );
@@ -156,14 +235,19 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
+      {/* Header + Edit */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">My Profile</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage your personal information</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
+            My Profile
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">
+            Manage your personal information
+          </p>
         </div>
         {!isEditing ? (
           <button
@@ -190,7 +274,7 @@ export default function ProfilePage() {
             >
               {isSaving ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
                   <span className="hidden sm:inline">Saving...</span>
                 </>
               ) : (
@@ -205,6 +289,18 @@ export default function ProfilePage() {
         )}
       </motion.div>
 
+      {/* Error / success messages */}
+      {errorMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3"
+        >
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+          <p className="text-red-800 font-medium">{errorMessage}</p>
+        </motion.div>
+      )}
+
       {successMessage && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -216,6 +312,7 @@ export default function ProfilePage() {
         </motion.div>
       )}
 
+      {/* Status card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -223,22 +320,32 @@ export default function ProfilePage() {
         className={`${statusConfig.bg} ${statusConfig.border} border rounded-xl p-4 sm:p-6`}
       >
         <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${statusConfig.bg} ${statusConfig.border} border-2 flex items-center justify-center flex-shrink-0`}>
-            <StatusIcon className={`h-5 w-5 sm:h-6 sm:w-6 ${statusConfig.color}`} />
+          <div
+            className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${statusConfig.bg} ${statusConfig.border} border-2 flex items-center justify-center flex-shrink-0`}
+          >
+            <StatusIcon
+              className={`h-5 w-5 sm:h-6 sm:w-6 ${statusConfig.color}`}
+            />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className={`text-base sm:text-lg font-semibold ${statusConfig.color} mb-1`}>
+            <h3
+              className={`text-base sm:text-lg font-semibold ${statusConfig.color} mb-1`}
+            >
               Account Status: {statusConfig.label}
             </h3>
             <p className="text-sm sm:text-base text-gray-700">
-              {user.status === UserStatus.APPROVED && 'Your account is active and you can access all features.'}
-              {user.status === UserStatus.PENDING && 'Your account is pending admin approval.'}
-              {user.status === UserStatus.REJECTED && 'Your account application was not approved.'}
+              {user.status === UserStatus.APPROVED &&
+                'Your account is active and you can access all features.'}
+              {user.status === UserStatus.PENDING &&
+                'Your account is pending admin approval.'}
+              {user.status === UserStatus.REJECTED &&
+                'Your account application was not approved.'}
             </p>
           </div>
         </div>
       </motion.div>
 
+      {/* Hero profile card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -250,11 +357,15 @@ export default function ProfilePage() {
             <UserIcon className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2">{user.fullName}</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+              {user.fullName}
+            </h2>
             <div className="flex flex-col sm:flex-row sm:flex-wrap items-center gap-2 sm:gap-4 text-sm sm:text-base text-green-100">
               <span className="flex items-center gap-2">
                 <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="truncate max-w-[200px] sm:max-w-none">{user.email}</span>
+                <span className="truncate max-w-[200px] sm:max-w-none">
+                  {user.email}
+                </span>
               </span>
               <span className="flex items-center gap-2">
                 <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -269,6 +380,7 @@ export default function ProfilePage() {
         </div>
       </motion.div>
 
+      {/* Personal info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -285,11 +397,15 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-1">
               <p className="text-xs sm:text-sm text-gray-500">Full Name</p>
-              <p className="text-base sm:text-lg font-semibold text-gray-900 break-words">{user.fullName}</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900 break-words">
+                {user.fullName}
+              </p>
             </div>
             <div className="space-y-1">
               <p className="text-xs sm:text-sm text-gray-500">Email</p>
-              <p className="text-base sm:text-lg font-semibold text-gray-900 break-all">{user.email}</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900 break-all">
+                {user.email}
+              </p>
             </div>
             <div className="space-y-1">
               <p className="text-xs sm:text-sm text-gray-500">Phone</p>
@@ -297,36 +413,47 @@ export default function ProfilePage() {
                 <input
                   type="tel"
                   value={editedUser.phone || ''}
-                  onChange={(e) => setEditedUser({ ...editedUser, phone: e.target.value })}
+                  onChange={(e) =>
+                    setEditedUser({ ...editedUser, phone: e.target.value })
+                  }
                   className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   placeholder="+923001234567"
                 />
               ) : (
-                <p className="text-base sm:text-lg font-semibold text-gray-900">{user.phone}</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">
+                  {user.phone}
+                </p>
               )}
             </div>
             <div className="space-y-1">
               <p className="text-xs sm:text-sm text-gray-500">City</p>
-              <p className="text-base sm:text-lg font-semibold text-gray-900">{user.city}</p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900">
+                {user.city}
+              </p>
             </div>
             <div className="space-y-1 sm:col-span-2">
               <p className="text-xs sm:text-sm text-gray-500">Address</p>
               {isEditing ? (
                 <textarea
                   value={editedUser.address || ''}
-                  onChange={(e) => setEditedUser({ ...editedUser, address: e.target.value })}
+                  onChange={(e) =>
+                    setEditedUser({ ...editedUser, address: e.target.value })
+                  }
                   rows={2}
                   className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   placeholder="Enter your full address"
                 />
               ) : (
-                <p className="text-base sm:text-lg font-semibold text-gray-900">{user.address}</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">
+                  {user.address}
+                </p>
               )}
             </div>
           </div>
         </div>
       </motion.div>
 
+      {/* Employment info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -342,43 +469,73 @@ export default function ProfilePage() {
         <div className="p-4 sm:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-1">
-              <p className="text-xs sm:text-sm text-gray-500">Employment Type</p>
-              <p className="text-base sm:text-lg font-semibold text-gray-900">{getEmploymentLabel(user.employmentType)}</p>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Employment Type
+              </p>
+              <p className="text-base sm:text-lg font-semibold text-gray-900">
+                {getEmploymentLabel(user.employmentType)}
+              </p>
             </div>
             <div className="space-y-1">
-              <p className="text-xs sm:text-sm text-gray-500">Monthly Income</p>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Monthly Income
+              </p>
               {isEditing ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm sm:text-base text-gray-600">PKR</span>
+                  <span className="text-sm sm:text-base text-gray-600">
+                    PKR
+                  </span>
                   <input
                     type="number"
-                    value={editedUser.monthlyIncome || ''}
-                    onChange={(e) => setEditedUser({ ...editedUser, monthlyIncome: Number(e.target.value) })}
+                    value={
+                      editedUser.monthlyIncome !== undefined
+                        ? editedUser.monthlyIncome
+                        : user.monthlyIncome
+                    }
+                    onChange={(e) =>
+                      setEditedUser({
+                        ...editedUser,
+                        monthlyIncome: Number(e.target.value),
+                      })
+                    }
                     className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    min="0"
+                    min={0}
                     placeholder="50000"
                   />
                 </div>
               ) : (
-                <p className="text-base sm:text-lg font-semibold text-gray-900">PKR {user.monthlyIncome.toLocaleString()}</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900">
+                  PKR {user.monthlyIncome.toLocaleString()}
+                </p>
               )}
             </div>
-            {user.employerName && (
-              <div className="space-y-1 sm:col-span-2">
-                <p className="text-xs sm:text-sm text-gray-500">Employer Name</p>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedUser.employerName || ''}
-                    onChange={(e) => setEditedUser({ ...editedUser, employerName: e.target.value })}
-                    className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="Company name"
-                  />
-                ) : (
-                  <p className="text-base sm:text-lg font-semibold text-gray-900">{user.employerName}</p>
-                )}
-              </div>
-            )}
+            <div className="space-y-1 sm:col-span-2">
+              <p className="text-xs sm:text-sm text-gray-500">
+                Employer Name
+              </p>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={
+                    editedUser.employerName !== undefined
+                      ? editedUser.employerName
+                      : user.employerName || ''
+                  }
+                  onChange={(e) =>
+                    setEditedUser({
+                      ...editedUser,
+                      employerName: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Company name"
+                />
+              ) : (
+                <p className="text-base sm:text-lg font-semibold text-gray-900">
+                  {user.employerName || '—'}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>

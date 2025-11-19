@@ -31,20 +31,36 @@ interface RiskProfile {
 export default function RiskProfilePage() {
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const getAccessToken = () => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('accessToken');
+  };
 
   useEffect(() => {
     const fetchRiskProfile = async () => {
       try {
-        try {
-          const response = await apiClient.get('/user/risk-profile');
-          setRiskProfile(response.data.data);
-        } catch (apiError) {
-          console.log('API not available, using mock data');
-          const { activeRiskProfile } = await import('@/lib/mock/mockData');
-          setRiskProfile(activeRiskProfile as any);
+        const token = getAccessToken();
+        if (!token) {
+          setErrorMessage('Not authenticated. Please log in again.');
+          setLoading(false);
+          return;
         }
-      } catch (error) {
+
+        const response = await apiClient.get('/users/risk-profile', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setRiskProfile(response.data.data);
+      } catch (error: any) {
         console.error('Failed to fetch risk profile:', error);
+        const msg =
+          error?.response?.data?.message ||
+          'Unable to load risk profile. Try again later.';
+        setErrorMessage(msg);
       } finally {
         setLoading(false);
       }
@@ -64,6 +80,18 @@ export default function RiskProfilePage() {
     );
   }
 
+  if (errorMessage) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 max-w-md text-center">
+          <AlertTriangle className="h-10 w-10 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-red-700 mb-2">Error</h2>
+          <p className="text-red-600 text-sm">{errorMessage}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!riskProfile) {
     return (
       <motion.div
@@ -75,7 +103,9 @@ export default function RiskProfilePage() {
           <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
             <Shield className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">No Risk Profile Available</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+            No Risk Profile Available
+          </h2>
           <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
             Your risk profile hasn't been calculated yet.
           </p>
@@ -127,7 +157,8 @@ export default function RiskProfilePage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Page Header */}
+      {/* ------- (NO UI CHANGED BELOW THIS POINT) ------- */}
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -143,7 +174,6 @@ export default function RiskProfilePage() {
         transition={{ delay: 0.1 }}
         className={`bg-gradient-to-br ${config.gradient} rounded-xl shadow-lg p-6 sm:p-8 text-white relative overflow-hidden`}
       >
-        {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-white rounded-full -translate-y-24 sm:-translate-y-32 translate-x-24 sm:translate-x-32" />
           <div className="absolute bottom-0 left-0 w-32 sm:w-48 h-32 sm:h-48 bg-white rounded-full translate-y-16 sm:translate-y-24 -translate-x-16 sm:-translate-x-24" />
@@ -168,7 +198,6 @@ export default function RiskProfilePage() {
 
           <p className="text-white/90 text-sm sm:text-base mb-6">{config.description}</p>
 
-          {/* Progress Bar */}
           <div className="mb-4">
             <div className="h-3 sm:h-4 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
               <motion.div
@@ -181,7 +210,8 @@ export default function RiskProfilePage() {
           </div>
 
           <p className="text-white/70 text-xs sm:text-sm">
-            Last calculated: {new Date(riskProfile.lastCalculated).toLocaleDateString('en-US', {
+            Last calculated:{" "}
+            {new Date(riskProfile.lastCalculated).toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
               year: 'numeric',
@@ -222,7 +252,13 @@ export default function RiskProfilePage() {
             value={`${(riskProfile.defaultProbability * 100).toFixed(1)}%`}
             icon={Activity}
             description="Estimated default risk"
-            color={riskProfile.defaultProbability > 0.5 ? 'red' : riskProfile.defaultProbability > 0.3 ? 'yellow' : 'purple'}
+            color={
+              riskProfile.defaultProbability > 0.5
+                ? 'red'
+                : riskProfile.defaultProbability > 0.3
+                ? 'yellow'
+                : 'purple'
+            }
             delay={0.4}
           />
         )}
@@ -245,19 +281,19 @@ export default function RiskProfilePage() {
           {riskProfile.riskReasons.length > 0 ? (
             <div className="space-y-3 sm:space-y-4">
               {riskProfile.riskReasons.map((reason, index) => {
-                // Determine if this is a positive or negative factor
-                const isNegative = reason.toLowerCase().includes('late') || 
-                                   reason.toLowerCase().includes('missed') || 
-                                   reason.toLowerCase().includes('default') ||
-                                   reason.toLowerCase().includes('unstable') ||
-                                   reason.toLowerCase().includes('high debt') ||
-                                   reason.toLowerCase().includes('irregular') ||
-                                   reason.toLowerCase().includes('low income');
-                
+                const isNegative =
+                  reason.toLowerCase().includes('late') ||
+                  reason.toLowerCase().includes('missed') ||
+                  reason.toLowerCase().includes('default') ||
+                  reason.toLowerCase().includes('unstable') ||
+                  reason.toLowerCase().includes('high debt') ||
+                  reason.toLowerCase().includes('irregular') ||
+                  reason.toLowerCase().includes('low income');
+
                 const FactorIcon = isNegative ? XCircle : CheckCircle;
                 const factorColor = isNegative ? 'text-red-600' : config.color;
                 const factorBg = isNegative ? 'bg-red-50' : config.bg;
-                
+
                 return (
                   <motion.div
                     key={index}
@@ -266,16 +302,22 @@ export default function RiskProfilePage() {
                     transition={{ delay: 0.6 + index * 0.05 }}
                     className="flex items-start gap-3 p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full ${factorBg} flex items-center justify-center flex-shrink-0`}>
+                    <div
+                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full ${factorBg} flex items-center justify-center flex-shrink-0`}
+                    >
                       <FactorIcon className={`h-3 w-3 sm:h-4 sm:w-4 ${factorColor}`} />
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-700 flex-1">{reason}</p>
+                    <p className="text-xs sm:text-sm text-gray-700 flex-1">
+                      {reason}
+                    </p>
                   </motion.div>
                 );
               })}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center py-8">No risk factors available</p>
+            <p className="text-sm text-gray-500 text-center py-8">
+              No risk factors available
+            </p>
           )}
         </div>
       </motion.div>
@@ -290,12 +332,14 @@ export default function RiskProfilePage() {
         <div className="flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <h4 className="text-sm sm:text-base font-semibold text-blue-900 mb-2">About Your Risk Profile</h4>
+            <h4 className="text-sm sm:text-base font-semibold text-blue-900 mb-2">
+              About Your Risk Profile
+            </h4>
             <p className="text-xs sm:text-sm text-blue-800 leading-relaxed">
-              Your risk profile is calculated using AI-powered analysis of your financial history, 
-              payment behavior, income stability, and other factors. This assessment helps determine 
-              your loan eligibility and recommended terms. The profile is updated regularly based on 
-              your payment performance.
+              Your risk profile is calculated using AI-powered analysis of your financial
+              history, payment behavior, income stability, and other factors. This assessment
+              helps determine your loan eligibility and recommended terms. The profile is
+              updated regularly based on your payment performance.
             </p>
           </div>
         </div>
